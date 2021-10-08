@@ -1,0 +1,294 @@
+{
+  "officer_roles": {
+    "president": {
+      "name": "President",
+      "id": "210640506298957825"
+    },
+    "pugg_officer": {
+      "name": "PUGG Officer",
+      "id": "886750236830228480"
+    },
+    "esports_officer": {
+      "name": "Esports Officer",
+      "id": "886750598538612787"
+    },
+    "casual_officer": {
+      "name": "Casual Officer",
+      "id": "886751469427122236"
+    }
+  },
+  "server_roles": {
+    "gamer": {
+      "name": "Gamer",
+      "id": "224771028679655426"
+    },
+    "purdue": {
+      "name": "Purdue",
+      "id": "885654290763505734"
+    },
+    "non_purdue": {
+      "name": "Non-Purdue",
+      "id": "885654467113013249"
+    }
+  },
+  "esports_roles": {
+    "player": {
+      "name": "Player",
+      "id": "886671745011023922"
+    },
+    "captain": {
+      "name": "Captain",
+      "id": "886671803412521011"
+    },
+    "coach": {
+      "name": "Coach",
+      "id": "886671773221924935"
+    }
+  },
+  "game_roles": [
+    {
+      "name": "Team Fortress 2",
+      "id": "895687148387328000",
+      "emote_name": "team_fortress_2",
+      "emote_id": "895687378373595176"
+    },
+    {
+      "name": "PUBG",
+      "id": "338852132436312065",
+      "emote_name": "pubg",
+      "emote_id": "883769151829733376"
+    },
+    {
+      "name": "Apex Legends",
+      "id": "892181670504046622",
+      "emote_name": "apex",
+      "emote_id": "892198425565741056"
+    },
+    {
+      "name": "Call of Duty",
+      "id": "338852441351258122",
+      "emote_name": "cod",
+      "emote_id": "883743362518249563"
+    },
+    {
+      "name": "CSGO",
+      "id": "338852173532102666",
+      "emote_name": "csgo",
+      "emote_id": "883769381048426546"
+    },
+    {
+      "name": "DOTA 2",
+      "id": "338852754397331466",
+      "emote_name": "dota_2",
+      "emote_id": "883770628119855205"
+    },
+    {
+      "name": "Halo",
+      "id": "338852407758946314",
+      "emote_name": "halo",
+      "emote_id": "883751191551553576"
+    },
+    {
+      "name": "Heroes of the Storm",
+      "id": "338852085938520064",
+      "emote_name": "HoTS",
+      "emote_id": "883754721461030992"
+    },
+    {
+      "name": "League of Legends",
+      "id": "338851943592230913",
+      "emote_name": "league_of_legends",
+      "emote_id": "883770969490092052"
+    },
+    {
+      "name": "Overwatch",
+      "id": "338852526550024192",
+      "emote_name": "overwatch",
+      "emote_id": "883768648391622687"
+    },
+    {
+      "name": "Pokemon GO",
+      "id": "339100475804745738",
+      "emote_name": "pokemon_go",
+      "emote_id": "883785945437044809"
+    },
+    {
+      "name": "Rocket League",
+      "id": "282176378986692618",
+      "emote_name": "rocket_league",
+      "emote_id": "883827198799274014"
+    },
+    {
+      "name": "Super Smash Bros",
+      "id": "338852234815340554",
+      "emote_name": "super_smash_bros",
+      "emote_id": "883831783769120798"
+    },
+    {
+      "name": "Touhou",
+      "id": "358381710829944852",
+      "emote_name": "touhou",
+      "emote_id": "883865257171374160"
+    },
+    {
+      "name": "osu!",
+      "id": "351784136224145408",
+      "emote_name": "osu",
+      "emote_id": "883825260825288765"
+    },
+    {
+      "name": "Grand Theft Auto",
+      "id": "351788529891803146",
+      "emote_name": "grand_theft_auto",
+      "emote_id": "883823477814100058"
+    },
+    {
+      "name": "Arma 3",
+      "id": "351906616943181824",
+      "emote_name": "arma_3",
+      "emote_id": "883797148100096010"
+    },
+    {
+      "name": "Splatoon",
+      "id": "352589257497509889",
+      "emote_name": "splatoon",
+      "emote_id": "883827933175775252"
+    },
+    {
+      "name": "Pokemon",
+      "id": "353620528440803328",
+      "emote_name": "pokemon",
+      "emote_id": "883827605340581918"
+    },
+    {
+      "name": "Destiny 2",
+      "id": "356274150198738965",
+      "emote_name": "destiny_2",
+      "emote_id": "883799222225371186"
+    },
+    {
+      "name": "Rainbow Six Siege",
+      "id": "376079087225143312",
+      "emote_name": "rainbow_six_siege",
+      "emote_id": "883824943970795530"
+    },
+    {
+      "name": "Fortnite",
+      "id": "401006382494777364",
+      "emote_name": "fortnite",
+      "emote_id": "883822872227889153"
+    },
+    {
+      "name": "Dead By Daylight",
+      "id": "539867179378671656",
+      "emote_name": "dead_by_daylight",
+      "emote_id": "883828904740139028"
+    },
+    {
+      "name": "Valorant",
+      "id": "746795021574864897",
+      "emote_name": "valorant",
+      "emote_id": "883824434618728479"
+    },
+    {
+      "name": "Minecraft",
+      "id": "746795239066435808",
+      "emote_name": "minecraft",
+      "emote_id": "883824074873258015"
+    },
+    {
+      "name": "World of Warcraft",
+      "id": "801641725814636554",
+      "emote_name": "world_of_warcraft",
+      "emote_id": "883794899953131530"
+    },
+    {
+      "name": "Escape from Tarkov",
+      "id": "801641794009432114",
+      "emote_name": "escape_from_tarkov",
+      "emote_id": "883794428639211580"
+    },
+    {
+      "name": "Mario Kart",
+      "id": "353620688373809153",
+      "emote_name": "mario_kart",
+      "emote_id": "883828401306230836"
+    },
+    {
+      "name": "Among Us",
+      "id": "750082588508422350",
+      "emote_name": "among_us",
+      "emote_id": "883793909002690580"
+    },
+    {
+      "name": "FFXIV",
+      "id": "365945435908603907",
+      "emote_name": "FFXIV",
+      "emote_id": "883822522364203038"
+    },
+    {
+      "name": "Hearthstone",
+      "id": "338889024406290432",
+      "emote_name": "hearthstone",
+      "emote_id": "883753927449927750"
+    }
+  ],
+  "genre_roles": [
+    {
+      "name": "Indie",
+      "id": "746802624124289026",
+      "emote_name": "indie_games",
+      "emote_id": "884100968558501908"
+    },
+    {
+      "name": "Tabletop",
+      "id": "746798047022940350",
+      "emote_name": "table_top_games",
+      "emote_id": "884101408868159548"
+    },
+    {
+      "name": "Couch & Party",
+      "id": "746795989762965616",
+      "emote_name": "couch_party_games",
+      "emote_id": "884101961492881478"
+    },
+    {
+      "name": "Card Games",
+      "id": "352589417736830978",
+      "emote_name": "card_games",
+      "emote_id": "884102552977825803"
+    }
+  ],
+  "platform_roles": [
+    {
+      "name": "PC",
+      "id": "436778376787918849",
+      "emote_name": "pc",
+      "emote_id": "884102902237519903"
+    },
+    {
+      "name": "Play Station",
+      "id": "436778370169307136",
+      "emote_name": "play_station",
+      "emote_id": "884103144987037717"
+    },
+    {
+      "name": "Xbox",
+      "id": "436778439677050881",
+      "emote_name": "xbox",
+      "emote_id": "884103526714867712"
+    },
+    {
+      "name": "Nintendo Switch",
+      "id": "436778470228492304",
+      "emote_name": "nintendo_switch",
+      "emote_id": "884103711255822386"
+    },
+    {
+      "name": "VR",
+      "id": "802723860872429608",
+      "emote_name": "vr",
+      "emote_id": "884103940008972289"
+    }
+  ]
+}

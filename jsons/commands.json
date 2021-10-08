@@ -1,0 +1,29 @@
+{
+  "general_commands":
+    {
+      "help": {
+        "name": "Help",
+        "prefix": "",
+        "usage": "help | help \"command\"",
+        "description": "Displays an interactive guide to bot usage."
+      }
+    }
+  ,
+  "moderator_commands":
+    {
+      "kick": {
+        "name": "Kick",
+        "prefix": "",
+        "usage": "kick @user \"Reason\" | kick <USER_ID> \"Reason\"",
+        "description": "Kicks a mentioned user from the server."
+      }
+    }
+  ,
+  "administrator_commands":
+    {
+      "name": "Build Role Menu",
+      "prefix": "build role menu",
+      "usage": "build role menu",
+      "description": "Builds an interactive self-roles menu."
+    }
+}

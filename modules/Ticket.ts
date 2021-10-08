@@ -1,8 +1,15 @@
-import { DataTypes, Model } from "sequelize";
-import { sequelize } from "./Database";
+import {DataTypes, Model} from "sequelize";
+import {sequelize} from "./Database";
 import {ticket_category_id, ticket_log_id} from "../config.json";
-import {MessageActionRow, MessageButton, MessageEmbed} from "discord.js";
-import { channelMention, userMention } from "@discordjs/builders";
+import {channelMention, userMention} from "@discordjs/builders";
+import {
+    ButtonInteraction, CategoryChannel,
+    GuildMember,
+    MessageActionRow,
+    MessageButton,
+    MessageEmbed,
+    Role, Snowflake, TextChannel
+} from "discord.js";
 
 /**
  * Ticket Class
@@ -10,6 +17,8 @@ import { channelMention, userMention } from "@discordjs/builders";
 class Ticket extends Model {
     status: boolean;
     content: string;
+    channelId: string;
+    ownerId: string;
 }
 
 /**
@@ -43,7 +52,7 @@ Ticket.init({
  * @param role
  * @param interaction
  */
-async function tryToOpenEsportsTicket(guildMember, role, interaction) {
+async function tryToOpenEsportsTicket(guildMember: GuildMember, role: Role, interaction: ButtonInteraction) {
     let currentOpenTickets;
     let ticketChannel;
     let embed;
@@ -53,7 +62,10 @@ async function tryToOpenEsportsTicket(guildMember, role, interaction) {
     currentOpenTickets = await getOpenTickets(guildMember);
 
     if (currentOpenTickets.length < 1) {
-        interaction.reply({content: "Request Failed: You already have an esports ticket open.", ephemeral: true});
+        await interaction.reply({
+            content: "Request Failed: You already have an esports ticket open.",
+            ephemeral: true
+        });
     } else {
         ticketChannel = await createTicketChannel(guildMember, role);
         embed = await createTicketEmbed();
@@ -62,7 +74,10 @@ async function tryToOpenEsportsTicket(guildMember, role, interaction) {
 
         await ticketChannel.send({ embeds: [embed] , components: [actionRow] });
         await logTicket(ticket, guildMember);
-        interaction.reply({content: `A ticket has been opened for you. Please follow instructions in ${channelMention(ticket.channelId)}`, ephemeral: true})
+        await interaction.reply({
+            content: `A ticket has been opened for you. Please follow instructions in ${channelMention(ticket.channelId)}`,
+            ephemeral: true
+        })
     }
 }
 
@@ -70,7 +85,7 @@ async function tryToOpenEsportsTicket(guildMember, role, interaction) {
  * Closes an Esports ticket via an interaction in the Ticket Channel
  * @param interaction
  */
-async function tryToCloseEsportsTicket(interaction) {
+async function tryToCloseEsportsTicket(interaction: ButtonInteraction) {
     let ticketChannel;
     let messageCollection;
     let channelMessages;
@@ -104,13 +119,12 @@ async function tryToCloseEsportsTicket(interaction) {
  * @param guildMember
  * @param role
  */
-async function createTicketChannel(guildMember, role) {
+async function createTicketChannel(guildMember: GuildMember, role: Role) {
     let guild = guildMember.guild;
-    let ticketChannelCategory = await guild.channels.fetch(ticket_category_id);
+    let ticketCategory = await guild.channels.fetch(ticket_category_id) as CategoryChannel;
 
-    return await guild.channels.create(`${guildMember.user.username}-${role.name}`, {
+    return await ticketCategory.createChannel(`${guildMember.user.username}-${role.name}`, {
         type: "GUILD_TEXT",
-        parent: ticketChannelCategory,
         permissionOverwrites: [
             {
                 id: guild.id,
@@ -125,18 +139,18 @@ async function createTicketChannel(guildMember, role) {
 
 /**
  * Creates and returns a new Ticket object
- * @param snowflake
+ * @param ownerId
  * @param channelId
  */
-async function createTicket(snowflake, channelId) {
-    return Ticket.create({ownerId: snowflake, channelId: channelId})
+async function createTicket(ownerId: Snowflake, channelId: Snowflake) {
+    return Ticket.create({ownerId: ownerId, channelId: channelId})
 }
 
 /**
  * Collects and returns all open Tickets for a particular guildMember
  * @param guildMember
  */
-async function getOpenTickets(guildMember) {
+async function getOpenTickets(guildMember: GuildMember) {
     return await Ticket.findAll({ where: { ownerId: guildMember.id}});
 }
 
@@ -145,10 +159,10 @@ async function getOpenTickets(guildMember) {
  * @param ticket
  * @param guildMember
  */
-async function logTicket(ticket, guildMember) {
+async function logTicket(ticket: Ticket, guildMember: GuildMember) {
     let status = ticket.status;
     let channelId = ticket.channelId;
-    let logChannel = await guildMember.guild.channels.fetch(ticket_log_id);
+    let logChannel = await guildMember.guild.channels.fetch(ticket_log_id) as TextChannel;
     let embed = new MessageEmbed();
 
     if (status) {
@@ -160,7 +174,7 @@ async function logTicket(ticket, guildMember) {
             .setDescription(`${userMention(ticket.ownerId)}'s ticket has been closed by ${userMention(guildMember.id)}`)
             .setColor("RED");
     }
-    logChannel.send({ embeds: [embed]})
+    await logChannel.send({embeds: [embed]})
 }
 
 /**

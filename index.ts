@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as readline from 'readline';
 import { REST } from '@discordjs/rest';
 import { Routes } from 'discord-api-types/v9';
-import { Client, Intents, Collection } from 'discord.js';
+import {Client, Intents, Collection, ButtonInteraction, CommandInteraction, SelectMenuInteraction} from 'discord.js';
 import { token, guildId, clientId } from './config.json';
 import { requestRole } from './scripts/roleManager';
 import { synchronize } from './modules/Database';
@@ -77,17 +77,16 @@ async function registerClientCommands(commands) {
  * Executes logic on a Button Interaction
  * @param interaction
  */
-async function receiveButton(interaction) {
+async function receiveButton(interaction: ButtonInteraction) {
     let id = interaction.customId;
-    if (id === `close_ticket`) return await tryToCloseEsportsTicket(interaction);
-    else await requestRole(interaction, id);
+    return (id == 'close_ticket') ? await tryToCloseEsportsTicket(interaction) : await  requestRole(interaction, id);
 }
 
 /**
  * Executes logic on a Command Interaction
  * @param interaction
  */
-async function receiveCommand(interaction) {
+async function receiveCommand(interaction: CommandInteraction) {
     const command = client["commands"].get(interaction.commandName);
 
     if (!command) return;
@@ -104,12 +103,12 @@ async function receiveCommand(interaction) {
  * Executes logic on a SelectMenu Interaction
  * @param interaction
  */
-async function receiveSelectMenu(interaction) {
+async function receiveSelectMenu(interaction: SelectMenuInteraction) {
     let roleId = interaction.values[0];
     await requestRole(interaction, roleId);
 }
 
-async function setRichPresence(client) {
+async function setRichPresence(client: Client) {
     let user;
     let activity;
 
@@ -126,7 +125,7 @@ async function setRichPresence(client) {
  * Informs Admins that the bot has been restarted
  * @param client
  */
-async function informDiscordOfRestart(client) {
+async function informDiscordOfRestart(client: Client) {
     await informDiscord("Bot has restarted.")
 }
 
@@ -142,7 +141,7 @@ async function informDiscordOfError(error) {
  * Sends a message to the discord developer channel
  * @param message
  */
-async function informDiscord(message) {
+async function informDiscord(message: String) {
     let guild;
     let channel;
 
@@ -175,5 +174,4 @@ async function createInterface() {
 }
 
 module.exports = {
-    informDiscord
 }

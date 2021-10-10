@@ -8,7 +8,14 @@ import { requestRole } from './scripts/roleManager';
 import { synchronize } from './modules/Database';
 import { tryToCloseEsportsTicket } from "./modules/Ticket";
 
-const client = new Client({intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MEMBERS, Intents.FLAGS.GUILD_BANS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_MESSAGE_REACTIONS, Intents.FLAGS.DIRECT_MESSAGES, Intents.FLAGS.DIRECT_MESSAGE_REACTIONS]});
+const client = new Client({
+    intents: [
+        Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MEMBERS,
+        Intents.FLAGS.GUILD_BANS, Intents.FLAGS.GUILD_MESSAGES,
+        Intents.FLAGS.GUILD_MESSAGE_REACTIONS, Intents.FLAGS.DIRECT_MESSAGES,
+        Intents.FLAGS.DIRECT_MESSAGE_REACTIONS
+    ]});
+
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 const rest = new REST({ version: '9' }).setToken(token);
 client["commands"] = new Collection();

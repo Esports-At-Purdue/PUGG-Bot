@@ -85,7 +85,6 @@ async function tryToOpenEsportsTicket(guildMember: GuildMember, role: Role, inte
  */
 async function tryToCloseEsportsTicket(interaction: ButtonInteraction) {
     let ticketChannel;
-    let messageCollection;
     let channelMessages;
     let guildMember;
     let guild;
@@ -96,13 +95,7 @@ async function tryToCloseEsportsTicket(interaction: ButtonInteraction) {
     ticketChannel = interaction.channel;
     ticket = await Ticket.findByPk(ticketChannel.id);
     ticketChannel = await guild.channels.fetch(ticketChannel.id);
-    channelMessages = '';
-    messageCollection = await ticketChannel.messages.fetch({limit: 100});
-
-    messageCollection.forEach(message => {
-        let username = message.author.username;
-        channelMessages = channelMessages.concat(`${username}: ${message.content}\n`);
-    });
+    channelMessages = await collectChannelMessages(ticketChannel);
 
     ticket.status = false;
     ticket.content = channelMessages;
@@ -172,6 +165,20 @@ async function logTicket(ticket: Ticket, guildMember: GuildMember) {
             .setColor("RED");
     }
     await logChannel.send({embeds: [embed]})
+}
+
+/**
+ * Collects the last 100 messages in a channel and pushes them to an array, and returns them as a string;
+ * @param channel
+ */
+async function collectChannelMessages(channel: TextChannel) {
+    let messageCollection = await channel.messages.fetch({limit: 100});
+    let messages = [];
+    messageCollection.forEach(message => {
+        let username = message.author.username;
+        messages.push(`${username}: ${message.content}`);
+    });
+    return messages.reverse().join('\n');
 }
 
 /**

@@ -2,6 +2,7 @@ import { SlashCommandBuilder } from '@discordjs/builders'
 import { User } from '../modules/User';
 import { username, password } from '../jsons/email.json';
 import * as nodemailer from 'nodemailer';
+import {CommandInteraction, GuildMember, Snowflake} from "discord.js";
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -11,7 +12,7 @@ module.exports = {
             .setName('email')
             .setDescription('Your Purdue University email address.')
             .setRequired(true)),
-    async execute(interaction) {
+    async execute(interaction: CommandInteraction) {
         let guildMember;
         let emailAddress;
         let isAlreadyVerified;
@@ -25,7 +26,7 @@ module.exports = {
         if (isAlreadyVerified) return interaction.reply({content: "You have already been verified!", ephemeral: true});
         if (isValidEmailAddress) await finishAuthentication(interaction, guildMember, emailAddress);
         else {
-            return interaction.reply({
+            await interaction.reply({
                 content: `The email you provided, ${emailAddress}, was invalid. Please use a valid Purdue email or Alumni email.`,
                 ephemeral: true
             })
@@ -33,6 +34,12 @@ module.exports = {
     }
 }
 
+/**
+ * Finalizes the authentication process once the provided email is validated
+ * @param interaction
+ * @param guildMember
+ * @param emailAddress
+ */
 async function finishAuthentication(interaction, guildMember, emailAddress) {
     let code;
     let profile;
@@ -58,7 +65,11 @@ async function finishAuthentication(interaction, guildMember, emailAddress) {
 
 }
 
-
+/**
+ * Sends an authentication code to a provided email address
+ * @param email
+ * @param code
+ */
 async function sendEmail(email, code) {
     let transporter = nodemailer.createTransport({
         service: 'gmail',
@@ -83,6 +94,10 @@ async function sendEmail(email, code) {
     });
 }
 
+/**
+ * Parses the provided email address and confirms that is valid
+ * @param emailAddress
+ */
 function checkIfEmailIsValid(emailAddress) {
     let emailRegExFilter;
     let filteredAddress = '';
@@ -95,7 +110,11 @@ function checkIfEmailIsValid(emailAddress) {
     return filteredAddress.endsWith('@purdue.edu') || filteredAddress.endsWith('@alumni.purdue.edu');
 }
 
-async function checkIfProfileVerified(snowflake) {
+/**
+ * Checks whether a User entry exists for a GuildMember
+ * @param snowflake
+ */
+async function checkIfProfileVerified(snowflake: Snowflake) {
     let user;
     let result;
 
@@ -105,11 +124,21 @@ async function checkIfProfileVerified(snowflake) {
     return result;
 }
 
-async function getUserById(id) {
-    return await User.findByPk(id);
+/**
+ * Gets a User by their Snowflake Id
+ * @param snowflake
+ */
+async function getUserById(snowflake: Snowflake) {
+    return await User.findByPk(snowflake);
 }
 
-async function createAndReturnProfile(guildMember, email, code) {
+/**
+ * Creates a new User from provided GuildMember, Email, and Auth Code
+ * @param guildMember
+ * @param email
+ * @param code
+ */
+async function createAndReturnProfile(guildMember: GuildMember, email: String, code: Number) {
     let name;
     let id;
 
@@ -119,6 +148,9 @@ async function createAndReturnProfile(guildMember, email, code) {
     return await User.create({ username: name, email: email, id: id, code: code})
 }
 
+/**
+ * Generates a random 6 digit code
+ */
 function generateAuthCode() {
     return Math.floor(100000 + Math.random() * 900000);
 }

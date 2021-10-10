@@ -79,7 +79,7 @@ async function registerClientCommands(commands) {
  */
 async function receiveButton(interaction: ButtonInteraction) {
     let id = interaction.customId;
-    return (id == 'close_ticket') ? await tryToCloseEsportsTicket(interaction) : await  requestRole(interaction, id);
+    return (id === 'close_ticket') ? await tryToCloseEsportsTicket(interaction) : await  requestRole(interaction, id);
 }
 
 /**

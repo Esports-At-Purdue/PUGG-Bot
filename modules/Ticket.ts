@@ -14,7 +14,6 @@ import {
  */
 class Ticket extends Model {
     status: boolean;
-    content: string;
     channelId: string;
     ownerId: string;
 }

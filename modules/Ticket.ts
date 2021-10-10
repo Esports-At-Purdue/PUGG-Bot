@@ -4,10 +4,8 @@ import {ticket_category_id, ticket_log_id} from "../config.json";
 import {channelMention, userMention} from "@discordjs/builders";
 import {
     ButtonInteraction, CategoryChannel,
-    GuildMember,
-    MessageActionRow,
-    MessageButton,
-    MessageEmbed,
+    GuildMember, MessageActionRow,
+    MessageButton, MessageEmbed,
     Role, Snowflake, TextChannel
 } from "discord.js";
 
@@ -150,7 +148,7 @@ async function createTicket(ownerId: Snowflake, channelId: Snowflake) {
  * @param guildMember
  */
 async function getOpenTickets(guildMember: GuildMember) {
-    return await Ticket.findAll({ where: { ownerId: guildMember.id, status: false}});
+    return await Ticket.findAll({ where: { ownerId: guildMember.id, status: true}});
 }
 
 /**

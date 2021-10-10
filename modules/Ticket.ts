@@ -61,7 +61,7 @@ async function tryToOpenEsportsTicket(guildMember: GuildMember, role: Role, inte
 
     currentOpenTickets = await getOpenTickets(guildMember);
 
-    if (currentOpenTickets.length < 1) {
+    if (currentOpenTickets.length > 0) {
         await interaction.reply({
             content: "Request Failed: You already have an esports ticket open.",
             ephemeral: true
@@ -112,7 +112,6 @@ async function tryToCloseEsportsTicket(interaction: ButtonInteraction) {
     await ticket.save();
     await ticketChannel.delete();
 }
-
 
 /**
  * Creates a channel for a new Ticket

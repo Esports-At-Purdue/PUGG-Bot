@@ -150,7 +150,7 @@ async function createTicket(ownerId: Snowflake, channelId: Snowflake) {
  * @param guildMember
  */
 async function getOpenTickets(guildMember: GuildMember) {
-    return await Ticket.findAll({ where: { ownerId: guildMember.id}});
+    return await Ticket.findAll({ where: { ownerId: guildMember.id, status: false}});
 }
 
 /**

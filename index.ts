@@ -2,19 +2,29 @@ import * as fs from 'fs';
 import * as readline from 'readline';
 import { REST } from '@discordjs/rest';
 import { Routes } from 'discord-api-types/v9';
-import {Client, Intents, Collection, ButtonInteraction, CommandInteraction, SelectMenuInteraction} from 'discord.js';
+import {roleMention} from '@discordjs/builders'
+import {
+    Client, Intents,
+    Collection, Snowflake,
+    ButtonInteraction,
+    CommandInteraction,
+    SelectMenuInteraction,
+    GuildMember, Role
+} from 'discord.js';
 import { token, guildId, clientId } from './config.json';
-import { requestRole } from './scripts/roleManager';
+import {server_roles} from './jsons/roles.json';
 import { synchronize } from './modules/Database';
-import { tryToCloseEsportsTicket } from "./modules/Ticket";
+import {tryToCloseEsportsTicket, tryToOpenEsportsTicket} from "./modules/Ticket";
 
 const client = new Client({
-    intents: [
-        Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MEMBERS,
-        Intents.FLAGS.GUILD_BANS, Intents.FLAGS.GUILD_MESSAGES,
-        Intents.FLAGS.GUILD_MESSAGE_REACTIONS, Intents.FLAGS.DIRECT_MESSAGES,
-        Intents.FLAGS.DIRECT_MESSAGE_REACTIONS
-    ]});
+    intents:
+        [
+            Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MEMBERS,
+            Intents.FLAGS.GUILD_BANS, Intents.FLAGS.GUILD_MESSAGES,
+            Intents.FLAGS.GUILD_MESSAGE_REACTIONS, Intents.FLAGS.DIRECT_MESSAGES,
+            Intents.FLAGS.DIRECT_MESSAGE_REACTIONS
+        ]
+});
 
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 const rest = new REST({ version: '9' }).setToken(token);
@@ -38,14 +48,14 @@ client.login(token).then(async () => {
 });
 
 client.on('interactionCreate', async interaction => {
-    try {
+    //try {
         //Sort Interactions
         if (interaction.isButton()) await receiveButton(interaction);
         if (interaction.isSelectMenu()) await receiveSelectMenu(interaction);
         if (interaction.isCommand()) await receiveCommand(interaction);
-    } catch(error) {
-        await informDiscordOfError(error);
-    }
+    //} catch(error) {
+        //await informDiscordOfError(error);
+    //}
 });
 
 /**
@@ -86,7 +96,14 @@ async function registerClientCommands(commands) {
  */
 async function receiveButton(interaction: ButtonInteraction) {
     let id = interaction.customId;
-    return (id === 'close_ticket') ? await tryToCloseEsportsTicket(interaction) : await  requestRole(interaction, id);
+
+    if (id === 'close_ticket') await tryToCloseEsportsTicket(interaction);
+    else {
+        let role = await interaction.guild.roles.fetch(id);
+        let guildMember = interaction.member as GuildMember;
+        let response = await requestRole(role, guildMember, interaction);
+        response ? await interaction.reply({content: response, ephemeral: true}) : 0;
+    }
 }
 
 /**
@@ -111,10 +128,62 @@ async function receiveCommand(interaction: CommandInteraction) {
  * @param interaction
  */
 async function receiveSelectMenu(interaction: SelectMenuInteraction) {
-    let roleId = interaction.values[0];
-    await requestRole(interaction, roleId);
+    let roleId = interaction.values[0] as Snowflake;
+    let guildMember = interaction.member as GuildMember;
+    let hasRole = await checkIfMemberHasRole(roleId, guildMember);
+
+    if (!hasRole) {
+        await addRoleToMember(roleId, guildMember);
+        return (`You successfully applied the role **${roleMention(roleId)}** to yourself.`);
+    } else {
+        await removeRoleFromMember(roleId, guildMember);
+        return (`You successfully removed the role **${roleMention(roleId)}** from yourself.`);
+    }
 }
 
+async function requestRole(role: Role, guildMember: GuildMember, interaction: ButtonInteraction) {
+    let hasRole = await checkIfMemberHasRole(role.id, guildMember);
+
+    switch (role.name) {
+        case 'Coach':
+        case 'Captain':
+        case 'Player':
+            if (hasRole) return ("You already have this role.");
+            else await tryToOpenEsportsTicket(guildMember, role, interaction);
+            break;
+
+        case 'Purdue':
+            if (hasRole) return "You already have this role.";
+            else return `Use the command **/verify** in any channel to verify your purdue email and receive the Purdue role.`;
+
+        case 'Non-Purdue':
+            let hasPurdueRole = await checkIfMemberHasRole(server_roles["purdue"]["id"], guildMember);
+            if (hasRole) {
+                await removeRoleFromMember(role.id, guildMember);
+                return `You successfully removed the role **${roleMention(role.id)}** from yourself.`;
+            } else {
+                if (hasPurdueRole) return "You cannot receive this role because you already have the role 'Purdue'.";
+                else {
+                    await addRoleToMember(role.id, guildMember);
+                    return `You successfully applied the role **${roleMention(role.id)}** to yourself.`;
+                }
+            }
+
+        default:
+            if (!hasRole) {
+                await addRoleToMember(role.id, guildMember);
+                return `You successfully applied the role **${roleMention(role.id)}** to yourself.`;
+            } else {
+                await removeRoleFromMember(role.id, guildMember);
+                return`You successfully removed the role **${roleMention(role.id)}** from yourself.`;
+            }
+    }
+}
+
+/**
+ * Sets game status for Bot Client
+ * @param client
+ */
 async function setRichPresence(client: Client) {
     let user;
     let activity;
@@ -126,6 +195,39 @@ async function setRichPresence(client: Client) {
     }
 
     user.setActivity(activity);
+}
+
+/**
+ * Adds a Role to a GuildMember
+ * @param snowflake
+ * @param guildMember
+ */
+async function addRoleToMember(snowflake: Snowflake, guildMember: GuildMember) {
+    await guildMember.roles.add(snowflake);
+}
+
+/**
+ * Removes a Role from a GuildMember
+ * @param snowflake
+ * @param guildMember
+ */
+async function removeRoleFromMember(snowflake: Snowflake, guildMember: GuildMember) {
+    await guildMember.roles.remove(snowflake);
+}
+
+/**
+ * Determines whether a GuildMember has a certain Role
+ * @param snowflake
+ * @param guildMember
+ */
+async function checkIfMemberHasRole(snowflake: Snowflake, guildMember: GuildMember) {
+    let result = false;
+    let roles = guildMember.roles.cache;
+
+    roles.forEach(role => {
+        if (role.id === snowflake) result = true;
+    })
+    return result;
 }
 
 /**
@@ -178,7 +280,4 @@ async function createInterface() {
         input: process.stdin,
         output: process.stdout
     })
-}
-
-module.exports = {
 }

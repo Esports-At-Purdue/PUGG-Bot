@@ -141,6 +141,12 @@ async function receiveSelectMenu(interaction: SelectMenuInteraction) {
     }
 }
 
+/**
+ * Executes logic for managing various roles from a ButtonInteraction
+ * @param role
+ * @param guildMember
+ * @param interaction
+ */
 async function requestRole(role: Role, guildMember: GuildMember, interaction: ButtonInteraction) {
     let hasRole = await checkIfMemberHasRole(role.id, guildMember);
     let hasPurdueRole = await checkIfMemberHasRole(server_roles["purdue"]["id"], guildMember);

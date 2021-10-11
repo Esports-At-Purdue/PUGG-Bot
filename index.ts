@@ -143,21 +143,21 @@ async function receiveSelectMenu(interaction: SelectMenuInteraction) {
 
 async function requestRole(role: Role, guildMember: GuildMember, interaction: ButtonInteraction) {
     let hasRole = await checkIfMemberHasRole(role.id, guildMember);
+    let hasPurdueRole = await checkIfMemberHasRole(server_roles["purdue"]["id"], guildMember);
 
     switch (role.name) {
         case 'Coach':
         case 'Captain':
         case 'Player':
             if (hasRole) return ("You already have this role.");
-            else await tryToOpenEsportsTicket(guildMember, role, interaction);
-            break;
+            if (hasPurdueRole) await tryToOpenEsportsTicket(guildMember, role, interaction);
+            return ("Pleaser verify yourself with **/verify** first.");
 
         case 'Purdue':
             if (hasRole) return "You already have this role.";
             else return `Use the command **/verify** in any channel to verify your purdue email and receive the Purdue role.`;
 
         case 'Non-Purdue':
-            let hasPurdueRole = await checkIfMemberHasRole(server_roles["purdue"]["id"], guildMember);
             if (hasRole) {
                 await removeRoleFromMember(role.id, guildMember);
                 return `You successfully removed the role **${roleMention(role.id)}** from yourself.`;

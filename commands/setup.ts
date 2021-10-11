@@ -6,6 +6,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('setup')
         .setDescription('Creates a various-purpose menu.')
+        .setDefaultPermission(false)
         .addStringOption(option =>
             option
                 .setName('menu_name')

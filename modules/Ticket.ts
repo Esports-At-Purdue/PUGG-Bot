@@ -19,7 +19,7 @@ class Ticket extends Model {
 }
 
 /**
- * Ticket DB Model
+ * Ticket DB Init
  */
 Ticket.init({
     ownerId: {

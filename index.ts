@@ -11,7 +11,7 @@ import {
     SelectMenuInteraction,
     GuildMember, Role, ApplicationCommand, MessageEmbed, Guild, TextChannel
 } from 'discord.js';
-import { token, guild_id, client_id } from './config.json';
+import { token, guild_id, client_id, log_channel_id } from './config.json';
 import {server_roles} from './jsons/roles.json';
 import {synchronize} from './modules/Database';
 import {Log, LogType} from './modules/Log';
@@ -249,8 +249,8 @@ async function checkIfMemberHasRole(snowflake: Snowflake, guildMember: GuildMemb
  * @param log
  */
 async function sendLogToDiscord(log: Log) {
-    let guild = await client.guilds.fetch("210627864691736577") as Guild;
-    let channel = await guild.channels.fetch("882040910928556062") as TextChannel;
+    let guild = await client.guilds.fetch(guild_id) as Guild;
+    let channel = await guild.channels.fetch(log_channel_id) as TextChannel;
     let embed = new MessageEmbed().setTitle(log.type).setDescription(log.message).setTimestamp(log.time).setColor(log.color);
 
     await channel.send({embeds: [embed]});

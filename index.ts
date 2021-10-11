@@ -14,6 +14,7 @@ import {
 import { token, guild_id, client_id } from './config.json';
 import {server_roles} from './jsons/roles.json';
 import {synchronize} from './modules/Database';
+import {Log, LogType} from './modules/Log';
 import {tryToCloseEsportsTicket, tryToOpenEsportsTicket} from "./modules/Ticket";
 
 const client = new Client({
@@ -53,6 +54,7 @@ client.on('interactionCreate', async interaction => {
         if (interaction.isButton()) await receiveButton(interaction);
         if (interaction.isSelectMenu()) await receiveSelectMenu(interaction);
         if (interaction.isCommand()) await receiveCommand(interaction);
+        await sendLogToDiscord(new Log(LogType.INTERACTION, `Successful ${interaction.type}`))
     } catch(error) {
         await sendLogToDiscord(new Log(LogType.ERROR, error));
     }
@@ -249,7 +251,7 @@ async function checkIfMemberHasRole(snowflake: Snowflake, guildMember: GuildMemb
 async function sendLogToDiscord(log: Log) {
     let guild = await client.guilds.fetch("210627864691736577") as Guild;
     let channel = await guild.channels.fetch("882040910928556062") as TextChannel;
-    let embed = new MessageEmbed().setTitle(log.type).setDescription(log.message).setTimestamp(log.time);
+    let embed = new MessageEmbed().setTitle(log.type).setDescription(log.message).setTimestamp(log.time).setColor(log.color);
 
     await channel.send({embeds: [embed]});
 }

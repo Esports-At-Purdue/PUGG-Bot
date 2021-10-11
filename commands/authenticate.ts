@@ -1,16 +1,19 @@
 import { SlashCommandBuilder } from '@discordjs/builders'
 import { User } from '../modules/User';
 import { server_roles } from '../jsons/roles.json'
+import {Client, CommandInteraction, Snowflake} from "discord.js";
+import {guild_id} from "../config.json";
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('authenticate')
         .setDescription('Authenticates email address with unique code')
+        .setDefaultPermission(false)
         .addIntegerOption(integer => integer
             .setName('code')
             .setDescription('Code received in verification email.')
             .setRequired(true)),
-    async execute(interaction) {
+    async execute(interaction: CommandInteraction) {
         let user; //Database User
         let code; //Unique authentication code
         let status; //Whether the User is active or inactive
@@ -57,5 +60,19 @@ module.exports = {
                 content: "You need to submit an email for verification first. (/verify)",
                 ephemeral: true});
         }
+    },
+    async setPermissions(client: Client, commandId: Snowflake) {
+        let guild = await client.guilds.fetch(guild_id);
+        let commandPermissionsManager = guild.commands.permissions;
+
+        await commandPermissionsManager.add({
+            command: commandId, permissions: [
+                {
+                    id: guild.id,
+                    type: 'ROLE',
+                    permission: true
+                },
+            ]
+        })
     }
 }

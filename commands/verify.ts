@@ -2,12 +2,14 @@ import { SlashCommandBuilder } from '@discordjs/builders'
 import { User } from '../modules/User';
 import { username, password } from '../jsons/email.json';
 import * as nodemailer from 'nodemailer';
-import {CommandInteraction, GuildMember, Snowflake} from "discord.js";
+import {Client, CommandInteraction, GuildMember, Snowflake} from "discord.js";
+import {guild_id} from "../config.json";
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('verify')
         .setDescription('Initiates Purdue email verification process.')
+        .setDefaultPermission(false)
         .addStringOption(string => string
             .setName('email')
             .setDescription('Your Purdue University email address.')
@@ -31,6 +33,20 @@ module.exports = {
                 ephemeral: true
             })
         }
+    },
+    async setPermissions(client: Client, commandId: Snowflake) {
+        let guild = await client.guilds.fetch(guild_id);
+        let commandPermissionsManager = guild.commands.permissions;
+
+        await commandPermissionsManager.add({
+            command: commandId, permissions: [
+                {
+                    id: guild.id,
+                    type: 'ROLE',
+                    permission: true
+                },
+            ]
+        })
     }
 }
 

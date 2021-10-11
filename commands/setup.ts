@@ -1,6 +1,15 @@
-import { MessageActionRow, MessageButton, MessageEmbed, MessageSelectMenu, Permissions} from 'discord.js'
+import {
+    Client,
+    CommandInteraction,
+    MessageActionRow,
+    MessageButton,
+    MessageEmbed,
+    MessageSelectMenu,
+    Permissions, Snowflake
+} from 'discord.js'
 import { SlashCommandBuilder } from '@discordjs/builders'
-import { game_roles, platform_roles, genre_roles, server_roles, esports_roles }from '../jsons/roles.json'
+import { game_roles, platform_roles, genre_roles, server_roles, esports_roles, officer_roles }from '../jsons/roles.json'
+import {guild_id} from '../config.json';
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -17,12 +26,11 @@ module.exports = {
                 .addChoice('games', 'games_menu')
                 .addChoice('platforms', 'platform_menu')
                 .addChoice('genres', 'genre_menu')),
-    async execute(interaction) {
+    async execute(interaction: CommandInteraction) {
         let menu_name = interaction.options.getString('menu_name');
         let guild = interaction.guild;
         let user = interaction.user;
         guild.members.fetch(user).then(guildMember => {
-            // @ts-ignore
             let hasManageMessages = guildMember.permissions.has(Permissions.FLAGS.MANAGE_MESSAGES);
             if (hasManageMessages) {
                 switch(menu_name) {
@@ -43,6 +51,22 @@ module.exports = {
                 interaction.reply({content: 'Sorry, you do not have permission to do this!', ephemeral: true});
             }
         })
+    },
+    async setPermissions(client: Client, commandId: Snowflake) {
+        let guild = await client.guilds.fetch(guild_id);
+        let commandPermissionsManager = guild.commands.permissions;
+
+        for (let role in officer_roles) {
+            await commandPermissionsManager.add({
+                command: commandId, permissions: [
+                    {
+                        id: officer_roles[role].id,
+                        type: 'ROLE',
+                        permission: true
+                    },
+                ]
+            })
+        }
     }
 }
 
@@ -174,3 +198,4 @@ function sortGames(array) {
     });
     return array;
 }
+

@@ -9,11 +9,11 @@ import {
     ButtonInteraction,
     CommandInteraction,
     SelectMenuInteraction,
-    GuildMember, Role
+    GuildMember, Role, ApplicationCommand, MessageEmbed, Guild, TextChannel
 } from 'discord.js';
-import { token, guildId, clientId } from './config.json';
+import { token, guild_id, client_id } from './config.json';
 import {server_roles} from './jsons/roles.json';
-import { synchronize } from './modules/Database';
+import {synchronize} from './modules/Database';
 import {tryToCloseEsportsTicket, tryToOpenEsportsTicket} from "./modules/Ticket";
 
 const client = new Client({
@@ -32,7 +32,7 @@ client["commands"] = new Collection();
 
 client.on('ready', async () => {
     await setRichPresence(client);
-    await informDiscordOfRestart(client)
+    await sendLogToDiscord(new Log(LogType.RESTART, 'Bot has been Restarted!'));
     await synchronize();
 });
 
@@ -48,14 +48,14 @@ client.login(token).then(async () => {
 });
 
 client.on('interactionCreate', async interaction => {
-    //try {
+    try {
         //Sort Interactions
         if (interaction.isButton()) await receiveButton(interaction);
         if (interaction.isSelectMenu()) await receiveSelectMenu(interaction);
         if (interaction.isCommand()) await receiveCommand(interaction);
-    //} catch(error) {
-        //await informDiscordOfError(error);
-    //}
+    } catch(error) {
+        await sendLogToDiscord(new Log(LogType.ERROR, error));
+    }
 });
 
 /**
@@ -72,7 +72,7 @@ async function collectAndSetCommandFiles(commands, commandFiles) {
 }
 
 /**
- * Takes all commands and registers them with Discord Restful API
+ * Takes commands and registers them with Discord Restful API, then sets their permissions
  * @param commands
  */
 async function registerClientCommands(commands) {
@@ -80,13 +80,36 @@ async function registerClientCommands(commands) {
         console.log('Started refreshing application (/) commands.');
 
         await rest.put(
-            Routes.applicationGuildCommands(clientId, guildId),
+            Routes.applicationGuildCommands(client_id, guild_id),
             {body: commands},
         );
+
+        let guildCommands = await rest.get(Routes.applicationGuildCommands(client_id, guild_id)) as Array <ApplicationCommand>;
+
+        for (let guildCommand of guildCommands) {
+            let command = client["commands"].get(guildCommand.name);
+            await command.setPermissions(client, guildCommand.id);
+        }
 
         console.log('Successfully reloaded application (/) commands.');
     } catch (error) {
         console.error(error);
+    }
+}
+
+/**
+ * Executes logic on a Command Interaction
+ * @param interaction
+ */
+async function receiveCommand(interaction: CommandInteraction) {
+    const command = client["commands"].get(interaction.commandName);
+
+    if (!command) return;
+
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        await sendLogToDiscord(new Log(LogType.ERROR, error));
     }
 }
 
@@ -103,23 +126,6 @@ async function receiveButton(interaction: ButtonInteraction) {
         let guildMember = interaction.member as GuildMember;
         let response = await requestRole(role, guildMember, interaction);
         response ? await interaction.reply({content: response, ephemeral: true}) : 0;
-    }
-}
-
-/**
- * Executes logic on a Command Interaction
- * @param interaction
- */
-async function receiveCommand(interaction: CommandInteraction) {
-    const command = client["commands"].get(interaction.commandName);
-
-    if (!command) return;
-
-    try {
-        await command.execute(interaction);
-    } catch (error) {
-        console.error(error);
-        await informDiscordOfError(error)
     }
 }
 
@@ -237,33 +243,15 @@ async function checkIfMemberHasRole(snowflake: Snowflake, guildMember: GuildMemb
 }
 
 /**
- * Informs Admins that the bot has been restarted
- * @param client
+ * Sends a log to the discord developer channel
+ * @param log
  */
-async function informDiscordOfRestart(client: Client) {
-    await informDiscord("Bot has restarted.")
-}
+async function sendLogToDiscord(log: Log) {
+    let guild = await client.guilds.fetch("210627864691736577") as Guild;
+    let channel = await guild.channels.fetch("882040910928556062") as TextChannel;
+    let embed = new MessageEmbed().setTitle(log.type).setDescription(log.message).setTimestamp(log.time);
 
-/**
- * Informs Admins that the bot has encountered an error
- * @param error
- */
-async function informDiscordOfError(error) {
-    await informDiscord(error)
-}
-
-/**
- * Sends a message to the discord developer channel
- * @param message
- */
-async function informDiscord(message: String) {
-    let guild;
-    let channel;
-
-    guild = await client.guilds.fetch("210627864691736577");
-    channel = await guild.channels.fetch("882040910928556062")
-
-    await channel.send({content: `${message}`})
+    await channel.send({embeds: [embed]});
 }
 
 /**

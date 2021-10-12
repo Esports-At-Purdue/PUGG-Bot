@@ -3,7 +3,7 @@ import {
     CommandInteraction,
     MessageActionRow,
     MessageButton,
-    MessageEmbed, MessagePayload,
+    MessageEmbed,
     MessageSelectMenu,
     Permissions, Snowflake
 } from 'discord.js'

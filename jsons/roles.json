@@ -2,19 +2,19 @@
   "officer_roles": {
     "president": {
       "name": "President",
-      "id": "210640506298957825"
+      "id": "897276662775963760"
     },
     "pugg_officer": {
       "name": "PUGG Officer",
-      "id": "886750236830228480"
+      "id": "897276662775963759"
     },
     "esports_officer": {
       "name": "Esports Officer",
-      "id": "886750598538612787"
+      "id": "897276662775963758"
     },
     "casual_officer": {
       "name": "Casual Officer",
-      "id": "886751469427122236"
+      "id": "897276662704644155"
     }
   },
   "server_roles": {

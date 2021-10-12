@@ -1,9 +1,11 @@
-import { SlashCommandBuilder } from '@discordjs/builders'
+import {SlashCommandBuilder, userMention} from '@discordjs/builders'
 import { User } from '../modules/User';
 import { username, password } from '../jsons/email.json';
 import * as nodemailer from 'nodemailer';
 import {Client, CommandInteraction, GuildMember, Snowflake} from "discord.js";
 import {guild_id} from "../config.json";
+import {sendLogToDiscord} from "../index";
+import {Log, LogType} from "../modules/Log";
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -161,6 +163,7 @@ async function createAndReturnProfile(guildMember: GuildMember, email: String, c
     name = guildMember.user.username;
     id = guildMember.id;
 
+    await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE, `New User Created:\nMember: ${userMention(id)}\nId: ${id}\nEmail: ${email}`))
     return await User.create({ username: name, email: email, id: id, code: code})
 }
 

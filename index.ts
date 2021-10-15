@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as readline from 'readline';
-import { REST } from '@discordjs/rest';
-import { Routes } from 'discord-api-types/v9';
+import {REST} from '@discordjs/rest';
+import {Routes} from 'discord-api-types/v9';
 import {channelMention, roleMention, userMention} from '@discordjs/builders'
 import {
     Client, Intents,
@@ -11,7 +11,7 @@ import {
     SelectMenuInteraction,
     GuildMember, Role, ApplicationCommand, MessageEmbed, Guild, TextChannel
 } from 'discord.js';
-import { token, guild_id, client_id, log_channel_id } from './config.json';
+import {token, guild_id, client_id, log_channel_id} from './config.json';
 import {server_roles} from './jsons/roles.json';
 import {synchronize} from './modules/Database';
 import {Log, LogType} from './modules/Log';
@@ -49,6 +49,7 @@ client.login(token).then(async () => {
 });
 
 client.on('interactionCreate', async interaction => {
+    /*
     try {
         //Sort Interactions
         if (interaction.isButton()) await receiveButton(interaction);
@@ -60,6 +61,11 @@ client.on('interactionCreate', async interaction => {
         Channel: ${channelMention(interaction.channelId)}\n
         User: ${userMention(interaction.user.id)}`));
     }
+     */
+    if (interaction.isButton()) await receiveButton(interaction);
+    if (interaction.isSelectMenu()) await receiveSelectMenu(interaction);
+    if (interaction.isCommand()) await receiveCommand(interaction);
+    await sendLogToDiscord(new Log(LogType.INTERACTION, `Successful ${interaction.type}`));
 });
 
 /**

@@ -91,7 +91,7 @@ function buildVerificationMenu(interaction) {
 function buildEsportsMenu(interaction) {
     let embed = new MessageEmbed()
         .setTitle("Esports Roles Menu")
-        .setDescription("Purdue Esport Players, select any of the roles to request verification. If multiple apply to you, communicate that in your ticket.");
+        .setDescription("If you play on a competitive esports team for Purdue, select any of the positions to open a request ticket. If multiple positions apply to you, communicate that in your ticket.");
 
     let row = new MessageActionRow()
         .addComponents(

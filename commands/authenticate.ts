@@ -1,8 +1,10 @@
-import { SlashCommandBuilder } from '@discordjs/builders'
-import { User } from '../modules/User';
-import { server_roles } from '../jsons/roles.json'
+import {SlashCommandBuilder, userMention} from '@discordjs/builders'
+import {User} from '../modules/User';
+import {server_roles} from '../jsons/roles.json'
 import {Client, CommandInteraction, Snowflake} from "discord.js";
 import {guild_id} from "../config.json";
+import {sendLogToDiscord} from "../index";
+import {Log, LogType} from "../modules/Log";
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -16,50 +18,25 @@ module.exports = {
     async execute(interaction: CommandInteraction) {
         let user; //Database User
         let code; //Unique authentication code
-        let status; //Whether the User is active or inactive
-        let purdueRole; //Purdue discord role
         let guildMember; //Discord user that initiated the interaction
-        let discordGuild; //Guild the guildMember is in
         let clientInput; //The authentication code the guildMember input
 
         guildMember = interaction.member;
-        discordGuild = interaction.guild;
         clientInput = interaction.options.getInteger('code');
         user = await User.findByPk(guildMember.id);
-        purdueRole = await discordGuild.roles.fetch(server_roles["purdue"]["id"]);
 
-        if (user !== null) //Evaluate whether there is a User associated with the discord account in the DB yet
-        {
-            status = user.status;
+        if (user) {
             code = user.code;
 
-            if (status) //Evaluate whether the User profile has been activated yet
-            {
-                return interaction.reply({
-                    content: "You have already been authenticated!",
-                    ephemeral: true});
+            if (code === 0) return interaction.reply({content: "You have already been authenticated!", ephemeral: true});
+            if (code !== clientInput) return interaction.reply({content: "Sorry, this code is incorrect.", ephemeral: true});
 
-            } else {
-                if (code === clientInput) //Evaluate whether the code the user input matches the authentication code
-                {
-                    await User.update({status: true, code: 0}, {where: {id: guildMember.id}});
-                    guildMember.roles.add(purdueRole);
-                    return interaction.reply({
-                        content: "You have successfully been authenticated!",
-                        ephemeral: true});
+            await activateProfile(user, guildMember);
+            return interaction.reply({content: "You have successfully been authenticated!", ephemeral: true});
 
-                } else {
-                    return interaction.reply({
-                        content: "Sorry, this code is incorrect.",
-                        ephemeral: true});
-
-                }
-            }
-        } else {
-            return interaction.reply({
-                content: "You need to submit an email for verification first. (/verify)",
-                ephemeral: true});
         }
+        return interaction.reply({content: "You need to submit an email for verification first. (/verify)", ephemeral: true});
+
     },
     async setPermissions(client: Client, commandId: Snowflake) {
         let guild = await client.guilds.fetch(guild_id);
@@ -75,4 +52,17 @@ module.exports = {
             ]
         })
     }
+}
+
+/**
+ * Activates a User profile in the database and adds the verified role
+ * @param profile
+ * @param guildMember
+ */
+async function activateProfile(profile, guildMember) {
+    let purdueRole = await guildMember.guild.roles.fetch(server_roles["purdue"]["id"]);
+
+    await User.update({status: true, code: 0}, {where: {id: guildMember.id}});
+    await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE, `Profile Activated:\nMember: ${userMention(guildMember.id)}\nId: ${guildMember.id}`));
+    guildMember.roles.add(purdueRole);
 }

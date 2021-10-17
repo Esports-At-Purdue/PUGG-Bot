@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as readline from 'readline';
 import {REST} from '@discordjs/rest';
 import {Routes} from 'discord-api-types/v9';
-import {roleMention} from '@discordjs/builders'
+import {roleMention, userMention} from '@discordjs/builders'
 import {
     Client, Intents,
     Collection, Snowflake,
@@ -49,7 +49,7 @@ client.login(token).then(async () => {
 });
 
 client.on('interactionCreate', async interaction => {
-    /*
+
     try {
         //Sort Interactions
         if (interaction.isButton()) await receiveButton(interaction);
@@ -61,11 +61,12 @@ client.on('interactionCreate', async interaction => {
         Channel: ${channelMention(interaction.channelId)}\n
         User: ${userMention(interaction.user.id)}`));
     }
-     */
+    /*
     if (interaction.isButton()) await receiveButton(interaction);
     if (interaction.isSelectMenu()) await receiveSelectMenu(interaction);
     if (interaction.isCommand()) await receiveCommand(interaction);
     await sendLogToDiscord(new Log(LogType.INTERACTION, `Successful ${interaction.type}`));
+     */
 });
 
 /**
@@ -289,4 +290,8 @@ async function createInterface() {
 
 export {
     sendLogToDiscord
+}
+
+function channelMention(channelId: string) {
+    throw new Error('Function not implemented.');
 }

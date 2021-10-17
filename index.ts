@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as readline from 'readline';
-import { REST } from '@discordjs/rest';
-import { Routes } from 'discord-api-types/v9';
+import {REST} from '@discordjs/rest';
+import {Routes} from 'discord-api-types/v9';
 import {roleMention} from '@discordjs/builders'
 import {
     Client, Intents,
@@ -11,7 +11,7 @@ import {
     SelectMenuInteraction,
     GuildMember, Role, ApplicationCommand, MessageEmbed, Guild, TextChannel
 } from 'discord.js';
-import { token, guild_id, client_id, log_channel_id } from './config.json';
+import {token, guild_id, client_id, log_channel_id} from './config.json';
 import {server_roles} from './jsons/roles.json';
 import {synchronize} from './modules/Database';
 import {Log, LogType} from './modules/Log';
@@ -49,15 +49,23 @@ client.login(token).then(async () => {
 });
 
 client.on('interactionCreate', async interaction => {
+    /*
     try {
         //Sort Interactions
         if (interaction.isButton()) await receiveButton(interaction);
         if (interaction.isSelectMenu()) await receiveSelectMenu(interaction);
         if (interaction.isCommand()) await receiveCommand(interaction);
-        await sendLogToDiscord(new Log(LogType.INTERACTION, `Successful ${interaction.type}`))
+        await sendLogToDiscord(new Log(LogType.INTERACTION, `Successful ${interaction.type}`));
     } catch(error) {
-        await sendLogToDiscord(new Log(LogType.ERROR, error));
+        await sendLogToDiscord(new Log(LogType.ERROR, `${interaction.type}: ${error}\n
+        Channel: ${channelMention(interaction.channelId)}\n
+        User: ${userMention(interaction.user.id)}`));
     }
+     */
+    if (interaction.isButton()) await receiveButton(interaction);
+    if (interaction.isSelectMenu()) await receiveSelectMenu(interaction);
+    if (interaction.isCommand()) await receiveCommand(interaction);
+    await sendLogToDiscord(new Log(LogType.INTERACTION, `Successful ${interaction.type}`));
 });
 
 /**
@@ -165,7 +173,8 @@ async function requestRole(role: Role, guildMember: GuildMember, interaction: Bu
         case 'Player':
             if (hasRole) return ("You already have this role.");
             if (hasPurdueRole) await tryToOpenEsportsTicket(guildMember, role, interaction);
-            return ("Pleaser verify yourself with **/verify** first.");
+            else return ("Pleaser verify yourself with **/verify** first.");
+            break;
 
         case 'Purdue':
             if (hasRole) return "You already have this role.";
@@ -276,4 +285,8 @@ async function createInterface() {
         input: process.stdin,
         output: process.stdout
     })
+}
+
+export {
+    sendLogToDiscord
 }

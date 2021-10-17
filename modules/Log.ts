@@ -3,12 +3,12 @@ import {ColorResolvable} from "discord.js";
 class Log {
     type: LogType;
     message: string;
-    color: ColorResolvable
+    color: ColorResolvable;
     time: Date;
 
     constructor(type: LogType, message: string) {
         this.type = type;
-        this.message = `\`\`\`${message}\`\`\``;
+        this.message = message;
         this.time = new Date();
 
         if (type == LogType.ERROR) this.color = "RED";

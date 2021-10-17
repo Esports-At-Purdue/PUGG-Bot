@@ -2,19 +2,19 @@
   "officer_roles": {
     "president": {
       "name": "President",
-      "id": "210640506298957825"
+      "id": "897276662775963760"
     },
     "pugg_officer": {
       "name": "PUGG Officer",
-      "id": "886750236830228480"
+      "id": "897276662775963759"
     },
     "esports_officer": {
       "name": "Esports Officer",
-      "id": "886750598538612787"
+      "id": "897276662775963758"
     },
     "casual_officer": {
       "name": "Casual Officer",
-      "id": "886751469427122236"
+      "id": "897276662704644155"
     }
   },
   "server_roles": {
@@ -24,7 +24,7 @@
     },
     "purdue": {
       "name": "Purdue",
-      "id": "885654290763505734"
+      "id": "897276662704644151"
     },
     "non_purdue": {
       "name": "Non-Purdue",
@@ -34,15 +34,15 @@
   "esports_roles": {
     "player": {
       "name": "Player",
-      "id": "886671745011023922"
+      "id": "897276662704644152"
     },
     "captain": {
       "name": "Captain",
-      "id": "886671803412521011"
+      "id": "897276662704644153"
     },
     "coach": {
       "name": "Coach",
-      "id": "886671773221924935"
+      "id": "897276662704644154"
     }
   },
   "game_roles": [

@@ -2,12 +2,19 @@ import {DataTypes, Model} from "sequelize";
 import {sequelize} from "./Database";
 import {ticket_category_id, ticket_log_id} from "../config.json";
 import {channelMention, userMention} from "@discordjs/builders";
+import {sendLogToDiscord} from '../index';
 import {
-    ButtonInteraction, CategoryChannel,
-    GuildMember, MessageActionRow,
-    MessageButton, MessageEmbed,
-    Role, Snowflake, TextChannel
+    ButtonInteraction,
+    CategoryChannel,
+    GuildMember,
+    MessageActionRow,
+    MessageButton,
+    MessageEmbed,
+    Role,
+    Snowflake,
+    TextChannel
 } from "discord.js";
+import {Log, LogType} from "./Log";
 
 /**
  * Ticket Class
@@ -99,6 +106,7 @@ async function tryToCloseEsportsTicket(interaction: ButtonInteraction) {
     ticket.status = false;
     ticket.content = channelMessages;
     await logTicket(ticket, guildMember);
+    await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE, `Ticket Updated:\nStatus: Closed\nOwner: ${userMention(ticket.ownerId)}`));
     await ticket.save();
     await ticketChannel.delete();
 }
@@ -132,7 +140,8 @@ async function createTicketChannel(guildMember: GuildMember, role: Role) {
  * @param channelId
  */
 async function createTicket(ownerId: Snowflake, channelId: Snowflake) {
-    return Ticket.create({ownerId: ownerId, channelId: channelId})
+    await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE, `New Ticket Created\nChannel: ${channelMention(channelId)}\nOwner: ${userMention(ownerId)}`));
+    return Ticket.create({ownerId: ownerId, channelId: channelId});
 }
 
 /**

@@ -16,8 +16,7 @@ module.exports = {
         .setName('setup')
         .setDescription('Creates a various-purpose menu.')
         .setDefaultPermission(false)
-        .addStringOption(option =>
-            option
+        .addStringOption(option => option
                 .setName('menu_name')
                 .setDescription('The name of the menu to setup')
                 .setRequired(true)
@@ -92,7 +91,7 @@ function buildVerificationMenu(interaction) {
 function buildEsportsMenu(interaction) {
     let embed = new MessageEmbed()
         .setTitle("Esports Roles Menu")
-        .setDescription("Purdue Esport Players, select any of the roles to request verification. If multiple apply to you, communicate that in your ticket.");
+        .setDescription("If you play on a competitive esports team for Purdue, select any of the positions to open a request ticket. If multiple positions apply to you, communicate that in your ticket.");
 
     let row = new MessageActionRow()
         .addComponents(
@@ -115,34 +114,13 @@ function buildEsportsMenu(interaction) {
 
 function buildGamesMenu(interaction) {
     let rows;
-    let games;
     let embed;
 
-    rows = [];
-    games = sortGames(game_roles);
+    rows = buildGamesRows();
     embed = new MessageEmbed()
         .setTitle("Game Selection Menu")
         .setDescription("Select any game to apply the role to yourself!");
 
-    for (let i = 0; i < Math.ceil(games.length / 25); i++) {
-        let actionRow = new MessageActionRow()
-        let selectMenu = new MessageSelectMenu()
-            .setCustomId(`games_${i}`)
-            .setPlaceholder('Select Games');
-
-        for (let j = i * 25; j < (i * 25) + 25; j++) {
-            if (games[j] !== undefined) {
-                selectMenu.addOptions([
-                    {
-                        label: `${games[j]["name"]}`,
-                        value: `${games[j]["id"]}`
-                    }
-                ])
-            }
-        }
-        actionRow.addComponents(selectMenu);
-        rows.push(actionRow);
-    }
     interaction.reply({ embeds: [embed], components: rows });
 }
 
@@ -182,7 +160,31 @@ function buildGenresMenu(interaction) {
     interaction.reply({ embeds: [embed] , components: [row] });
 }
 
-exports.buildGamesMenu = buildGamesMenu;
+function buildGamesRows() {
+    let rows = [];
+    let games = sortGames(game_roles);
+    for (let i = 0; i < Math.ceil(games.length / 25); i++) {
+        let actionRow = new MessageActionRow()
+        let selectMenu = new MessageSelectMenu()
+            .setCustomId(`games_${i}`)
+            .setPlaceholder('Select Games');
+
+        for (let j = i * 25; j < (i * 25) + 25; j++) {
+            if (games[j] !== undefined) {
+                selectMenu.addOptions([
+                    {
+                        label: `${games[j]["name"]}`,
+                        value: `${games[j]["id"]}`
+                    }
+                ])
+            }
+        }
+        actionRow.addComponents(selectMenu);
+        rows.push(actionRow);
+    }
+
+    return rows;
+}
 
 function sortGames(array) {
     array.sort(function(a,b) {
@@ -198,4 +200,3 @@ function sortGames(array) {
     });
     return array;
 }
-

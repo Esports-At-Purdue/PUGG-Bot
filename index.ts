@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as readline from 'readline';
 import {REST} from '@discordjs/rest';
 import {Routes} from 'discord-api-types/v9';
-import {channelMention, roleMention, userMention} from '@discordjs/builders'
+import {roleMention} from '@discordjs/builders'
 import {
     Client, Intents,
     Collection, Snowflake,

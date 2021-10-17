@@ -69,9 +69,7 @@ async function finishAuthentication(interaction, guildMember, emailAddress) {
 
     await sendEmail(emailAddress, code);
     if (profile) {
-        profile.code = code;
-        profile.email = emailAddress;
-        profile.save();
+        await User.update({code: code, email: emailAddress}, {where: {id: guildMember.id}});
     } else {
         await createAndReturnProfile(guildMember, emailAddress, code)
     }

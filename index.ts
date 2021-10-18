@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as readline from 'readline';
 import {REST} from '@discordjs/rest';
 import {Routes} from 'discord-api-types/v9';
-import {roleMention, userMention} from '@discordjs/builders'
+import {channelMention, roleMention, userMention} from '@discordjs/builders'
 import {
     Client, Intents,
     Collection, Snowflake,
@@ -49,7 +49,6 @@ client.login(token).then(async () => {
 });
 
 client.on('interactionCreate', async interaction => {
-
     try {
         //Sort Interactions
         if (interaction.isButton()) await receiveButton(interaction);
@@ -151,10 +150,10 @@ async function receiveSelectMenu(interaction: SelectMenuInteraction) {
 
     if (!hasRole) {
         await addRoleToMember(roleId, guildMember);
-        return (`You successfully applied the role **${roleMention(roleId)}** to yourself.`);
+        await interaction.reply({content: `You successfully applied the role **${roleMention(roleId)}** to yourself.`, ephemeral: true});
     } else {
         await removeRoleFromMember(roleId, guildMember);
-        return (`You successfully removed the role **${roleMention(roleId)}** from yourself.`);
+        await interaction.reply({content: `You successfully removed the role **${roleMention(roleId)}** from yourself.`, ephemeral: true});
     }
 }
 
@@ -290,8 +289,4 @@ async function createInterface() {
 
 export {
     sendLogToDiscord
-}
-
-function channelMention(channelId: string) {
-    throw new Error('Function not implemented.');
 }

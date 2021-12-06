@@ -2,19 +2,19 @@
   "officer_roles": {
     "president": {
       "name": "President",
-      "id": "897276662775963760"
+      "id": "210640506298957825"
     },
     "pugg_officer": {
       "name": "PUGG Officer",
-      "id": "897276662775963759"
+      "id": "886750236830228480"
     },
     "esports_officer": {
       "name": "Esports Officer",
-      "id": "897276662775963758"
+      "id": "886750598538612787"
     },
     "casual_officer": {
       "name": "Casual Officer",
-      "id": "897276662704644155"
+      "id": "886751469427122236"
     }
   },
   "server_roles": {
@@ -24,7 +24,7 @@
     },
     "purdue": {
       "name": "Purdue",
-      "id": "897276662704644151"
+      "id": "885654290763505734"
     },
     "non_purdue": {
       "name": "Non-Purdue",
@@ -34,27 +34,27 @@
   "esports_roles": {
     "player": {
       "name": "Player",
-      "id": "897276662704644152"
+      "id": "886671745011023922"
     },
     "captain": {
       "name": "Captain",
-      "id": "897276662704644153"
+      "id": "886671803412521011"
     },
     "coach": {
       "name": "Coach",
-      "id": "897276662704644154"
+      "id": "886671773221924935"
     }
   },
   "game_roles": [
     {
       "name": "Team Fortress 2",
-      "id": "897276662629158937",
+      "id": "895687148387328000",
       "emote_name": "team_fortress_2",
       "emote_id": "895687378373595176"
     },
     {
       "name": "PUBG",
-      "id": "897276662645915648",
+      "id": "338852132436312065",
       "emote_name": "pubg",
       "emote_id": "883769151829733376"
     },

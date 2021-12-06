@@ -10,6 +10,7 @@ import {
 import { SlashCommandBuilder } from '@discordjs/builders'
 import { game_roles, platform_roles, genre_roles, server_roles, esports_roles, officer_roles }from '../jsons/roles.json'
 import {guild_id} from '../config.json';
+import {client} from "../index";
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -112,11 +113,11 @@ function buildEsportsMenu(interaction) {
     interaction.reply({ embeds: [embed] , components: [row] });
 }
 
-function buildGamesMenu(interaction) {
+async function buildGamesMenu(interaction) {
     let rows;
     let embed;
 
-    rows = buildGamesRows();
+    rows = await buildGamesRows();
     embed = new MessageEmbed()
         .setTitle("Game Selection Menu")
         .setDescription("Select any game to apply the role to yourself!");
@@ -124,59 +125,70 @@ function buildGamesMenu(interaction) {
     interaction.reply({ embeds: [embed], components: rows });
 }
 
-function buildPlatformsMenu(interaction) {
+async function buildPlatformsMenu(interaction) {
     let embed = new MessageEmbed()
         .setTitle("Platform Button Menu")
         .setDescription("Select any of the platforms you game on!");
 
-    let row = new MessageActionRow()
-    platform_roles.forEach(role => {
+    let row = new MessageActionRow();
+
+    for (const role of platform_roles) {
+        let emoji_guild = await client.guilds.fetch('811651620856135731');
+        let emoji = await emoji_guild.emojis.fetch(role["emote_id"]);
         row.addComponents(
             new MessageButton()
                 .setCustomId(`${role.id}`)
                 .setLabel(`${role.name}`)
                 .setStyle('SECONDARY')
-        );
-    })
+                .setEmoji(emoji)
+        )
+    }
 
-    interaction.reply({ embeds: [embed] , components: [row] });
+    interaction.reply({embeds: [embed], components: [row]});
 }
 
-function buildGenresMenu(interaction) {
+async function buildGenresMenu(interaction) {
     let embed = new MessageEmbed()
         .setTitle("Genres Button Menu")
         .setDescription("Select any of the game genres that you enjoy!");
 
-    let row = new MessageActionRow()
+    let row = new MessageActionRow();
 
-    genre_roles.forEach(role => {
+    for (const role of genre_roles) {
+        let emoji_guild = await client.guilds.fetch('811651620856135731');
+        let emoji = await emoji_guild.emojis.fetch(role["emote_id"]);
         row.addComponents(
             new MessageButton()
                 .setCustomId(`${role.id}`)
                 .setLabel(`${role.name}`)
                 .setStyle('SECONDARY')
+                .setEmoji(emoji)
         )
-    })
+    }
+
     interaction.reply({ embeds: [embed] , components: [row] });
 }
 
-function buildGamesRows() {
+async function buildGamesRows() {
     let rows = [];
     let games = sortGames(game_roles);
     for (let i = 0; i < Math.ceil(games.length / 25); i++) {
         let actionRow = new MessageActionRow()
         let selectMenu = new MessageSelectMenu()
-            .setCustomId(`games_${i}`)
-            .setPlaceholder('Select Games');
+            .setCustomId(`select_${i}`)
+            .setPlaceholder('Select your favorite games!');
 
         for (let j = i * 25; j < (i * 25) + 25; j++) {
             if (games[j] !== undefined) {
+                let emoji_guild = await client.guilds.fetch('811651620856135731');
+                let emoji = await emoji_guild.emojis.fetch(games[j]["emote_id"]);
                 selectMenu.addOptions([
                     {
                         label: `${games[j]["name"]}`,
-                        value: `${games[j]["id"]}`
+                        value: `${games[j]["id"]}`,
+                        emoji: emoji
                     }
-                ])
+                ]);
             }
         }
         actionRow.addComponents(selectMenu);

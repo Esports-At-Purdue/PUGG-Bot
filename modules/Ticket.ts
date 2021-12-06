@@ -1,18 +1,13 @@
 import {DataTypes, Model} from "sequelize";
 import {sequelize} from "./Database";
-import {ticket_category_id, ticket_log_id} from "../config.json";
+import {support_category, ticket_log_channel} from "../config.json";
 import {channelMention, userMention} from "@discordjs/builders";
 import {sendLogToDiscord} from '../index';
 import {
-    ButtonInteraction,
-    CategoryChannel,
-    GuildMember,
-    MessageActionRow,
-    MessageButton,
-    MessageEmbed,
-    Role,
-    Snowflake,
-    TextChannel
+    ButtonInteraction, CategoryChannel,
+    GuildMember, MessageActionRow,
+    MessageButton, MessageEmbed,
+    Role, Snowflake, TextChannel
 } from "discord.js";
 import {Log, LogType} from "./Log";
 
@@ -118,7 +113,7 @@ async function tryToCloseEsportsTicket(interaction: ButtonInteraction) {
  */
 async function createTicketChannel(guildMember: GuildMember, role: Role) {
     let guild = guildMember.guild;
-    let ticketCategory = await guild.channels.fetch(ticket_category_id) as CategoryChannel;
+    let ticketCategory = await guild.channels.fetch(support_category) as CategoryChannel;
 
     return await ticketCategory.createChannel(`${guildMember.user.username}-${role.name}`, {
         type: "GUILD_TEXT",
@@ -160,7 +155,7 @@ async function getOpenTickets(guildMember: GuildMember) {
 async function logTicket(ticket: Ticket, guildMember: GuildMember) {
     let status = ticket.status;
     let channelId = ticket.channelId;
-    let logChannel = await guildMember.guild.channels.fetch(ticket_log_id) as TextChannel;
+    let logChannel = await guildMember.guild.channels.fetch(ticket_log_channel) as TextChannel;
     let embed = new MessageEmbed();
 
     if (status) {

@@ -1,10 +1,10 @@
 import {SlashCommandBuilder, userMention} from '@discordjs/builders'
-import {User} from '../modules/User';
 import {server_roles} from '../jsons/roles.json'
 import {Client, CommandInteraction, Snowflake} from "discord.js";
 import {guild_id} from "../config.json";
 import {sendLogToDiscord} from "../index";
 import {Log, LogType} from "../modules/Log";
+import newUser from "../NewUser";
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -23,7 +23,7 @@ module.exports = {
 
         guildMember = interaction.member;
         clientInput = interaction.options.getInteger('code');
-        user = await User.findByPk(guildMember.id);
+        user = await newUser.get(guildMember.id);
 
         if (user) {
             code = user.code;
@@ -32,10 +32,11 @@ module.exports = {
             if (code !== clientInput) return interaction.reply({content: "Sorry, this code is incorrect.", ephemeral: true});
 
             await activateProfile(user, guildMember);
-            return interaction.reply({content: "You have successfully been authenticated!", ephemeral: true});
+            await interaction.reply({content: "You have successfully been authenticated!", ephemeral: true});
 
+        } else {
+            await interaction.reply({content: "You need to submit an email for verification first. (/verify)", ephemeral: true});
         }
-        return interaction.reply({content: "You need to submit an email for verification first. (/verify)", ephemeral: true});
 
     },
     async setPermissions(client: Client, commandId: Snowflake) {
@@ -56,13 +57,15 @@ module.exports = {
 
 /**
  * Activates a User profile in the database and adds the verified role
- * @param profile
+ * @param user
  * @param guildMember
  */
-async function activateProfile(profile, guildMember) {
+async function activateProfile(user: newUser, guildMember) {
     let purdueRole = await guildMember.guild.roles.fetch(server_roles["purdue"]["id"]);
 
-    await User.update({status: true, code: 0}, {where: {id: guildMember.id}});
-    await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE, `Profile Activated:\nMember: ${userMention(guildMember.id)}\nId: ${guildMember.id}`));
+    user.status = true;
+    user.code = 0;
+    await newUser.put(user);
+    await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE, `Profile Activated:\nMember: ${userMention(user.id)}\nId: ${user.id}`));
     guildMember.roles.add(purdueRole);
 }

@@ -1,21 +1,20 @@
 import * as fs from 'fs';
+import * as express from "express";
 import * as readline from 'readline';
 import {REST} from '@discordjs/rest';
 import {Routes} from 'discord-api-types/v9';
 import {channelMention, roleMention, userMention} from '@discordjs/builders'
 import {
-    Client, Intents,
-    Collection, Snowflake,
-    ButtonInteraction,
-    CommandInteraction,
-    SelectMenuInteraction,
-    GuildMember, Role, ApplicationCommand, MessageEmbed, Guild, TextChannel
+    ApplicationCommand, ButtonInteraction, Client, Collection, CommandInteraction, Guild,
+    GuildMember, Intents, MessageEmbed, Role, SelectMenuInteraction, Snowflake, TextChannel
 } from 'discord.js';
-import {token, guild_id, client_id, log_channel_id} from './config.json';
+import {client_id, guild_id, log_channel, join_channel, leave_channel, token} from './config.json';
 import {server_roles} from './jsons/roles.json';
 import {synchronize} from './modules/Database';
 import {Log, LogType} from './modules/Log';
 import {tryToCloseEsportsTicket, tryToOpenEsportsTicket} from "./modules/Ticket";
+import {connectToDatabase} from "./services/database.service";
+import {usersRouter} from "./services/users.router";
 
 const client = new Client({
     intents:
@@ -27,18 +26,26 @@ const client = new Client({
         ]
 });
 
+const app = express();
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 const rest = new REST({ version: '9' }).setToken(token);
 client["commands"] = new Collection();
 
-client.on('ready', async () => {
-    await setRichPresence(client);
-    await sendLogToDiscord(new Log(LogType.RESTART, 'Bot has been Restarted!'));
-    await synchronize();
-});
-
 client.login(token).then(async () => {
     let commands = [];
+
+    //MongoDB Connect
+    await connectToDatabase().then(() => {
+        app.use("/users", usersRouter);
+        app.listen(29017, () => {
+            console.log(`Server started at http://localhost:${29017}`);
+        });
+    }).catch((error: Error) => {
+        console.error("Database connection failed", error);
+        process.exit();
+    });
+
+    //await migrateData();
 
     //Collect and Register Commands
     await collectAndSetCommandFiles(commands, commandFiles);
@@ -46,6 +53,12 @@ client.login(token).then(async () => {
 
     //Readline
     await listenForStopCommand();
+});
+
+client.on('ready', async () => {
+    await setRichPresence(client);
+    await sendLogToDiscord(new Log(LogType.RESTART, 'Bot has been Restarted!'));
+    await synchronize();
 });
 
 client.on('interactionCreate', async interaction => {
@@ -67,6 +80,18 @@ client.on('interactionCreate', async interaction => {
     await sendLogToDiscord(new Log(LogType.INTERACTION, `Successful ${interaction.type}`));
      */
 });
+
+client.on('guildMemberAdd', async guildMember => {
+    const guild = await client.guilds.fetch(guild_id);
+    const channel = await guild.channels.fetch(join_channel) as TextChannel;
+    await channel.send({content: `${guildMember.user} has joined. Index: ${guild.memberCount}`});
+});
+
+client.on('guildMemberRemove', async guildMember => {
+    const guild = await client.guilds.fetch(guild_id);
+    const channel = await guild.channels.fetch(leave_channel) as TextChannel;
+    await channel.send({content: `${guildMember.user.username} has left.`})
+})
 
 /**
  * Takes data from commands files (./commands/**) and set's them as client's commands
@@ -259,7 +284,7 @@ async function checkIfMemberHasRole(snowflake: Snowflake, guildMember: GuildMemb
  */
 async function sendLogToDiscord(log: Log) {
     let guild = await client.guilds.fetch(guild_id) as Guild;
-    let channel = await guild.channels.fetch(log_channel_id) as TextChannel;
+    let channel = await guild.channels.fetch(log_channel) as TextChannel;
     let embed = new MessageEmbed().setTitle(log.type).setDescription(log.message).setTimestamp(log.time).setColor(log.color);
 
     await channel.send({embeds: [embed]});
@@ -287,6 +312,32 @@ async function createInterface() {
     })
 }
 
+/*
+async function migrateData() {
+    const sqlUsers = await User.findAll();
+
+    for (const sqlUser of sqlUsers) {
+        const userTemplate = {
+            _id: sqlUser.id.toString(),
+            _username: sqlUser.username.toString(),
+            _email: sqlUser.email.toString(),
+            _code: sqlUser.code,
+            _status: sqlUser.status
+        }
+
+        try {
+            const user = newUser.fromObject(userTemplate);
+            await newUser.post(user);
+            await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE,`Successfully migrated ${user.username}`));
+        } catch (error) {
+
+        }
+
+    }
+}
+ */
+
 export {
+    client,
     sendLogToDiscord
 }

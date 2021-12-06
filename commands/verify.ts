@@ -1,11 +1,12 @@
 import {SlashCommandBuilder, userMention} from '@discordjs/builders'
-import { User } from '../modules/User';
 import { username, password } from '../jsons/email.json';
 import * as nodemailer from 'nodemailer';
 import {Client, CommandInteraction, GuildMember, Snowflake} from "discord.js";
 import {guild_id} from "../config.json";
 import {sendLogToDiscord} from "../index";
 import {Log, LogType} from "../modules/Log";
+import {server_roles} from "../jsons/roles.json";
+import newUser from "../NewUser";
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -27,8 +28,12 @@ module.exports = {
         isAlreadyVerified = await checkIfProfileVerified(guildMember.id);
         isValidEmailAddress = checkIfEmailIsValid(emailAddress);
 
-        if (isAlreadyVerified) return interaction.reply({content: "You have already been verified!", ephemeral: true});
-        if (isValidEmailAddress) await finishAuthentication(interaction, guildMember, emailAddress);
+        if (isAlreadyVerified) {
+            await interaction.reply({content: "You have already been verified!", ephemeral: true});
+            let purdueRole = await guildMember.guild.roles.fetch(server_roles["purdue"]["id"]);
+            await guildMember.roles.add(purdueRole);
+        }
+        else if (isValidEmailAddress) await finishAuthentication(interaction, guildMember, emailAddress);
         else {
             await interaction.reply({
                 content: `The email you provided, ${emailAddress}, was invalid. Please use a valid Purdue email or Alumni email.`,
@@ -60,16 +65,20 @@ module.exports = {
  */
 async function finishAuthentication(interaction, guildMember, emailAddress) {
     let code;
-    let profile;
+    let user;
     let id;
 
     code = generateAuthCode();
     id = guildMember.id;
-    profile = await getUserById(id);
+    user = await newUser.get(id);
+
+    console.log("made it this far");
 
     await sendEmail(emailAddress, code);
-    if (profile) {
-        await User.update({code: code, email: emailAddress}, {where: {id: guildMember.id}});
+    if (user) {
+        user.code = code;
+        user.email = emailAddress;
+        await newUser.put(user);
     } else {
         await createAndReturnProfile(guildMember, emailAddress, code)
     }
@@ -134,18 +143,10 @@ async function checkIfProfileVerified(snowflake: Snowflake) {
     let user;
     let result;
 
-    user = await getUserById(snowflake);
-    result = user !== null ? user.status : false;
+    user = await newUser.get(snowflake);
+    result = user ? user.status : false;
 
     return result;
-}
-
-/**
- * Gets a User by their Snowflake Id
- * @param snowflake
- */
-async function getUserById(snowflake: Snowflake) {
-    return await User.findByPk(snowflake);
 }
 
 /**
@@ -154,15 +155,18 @@ async function getUserById(snowflake: Snowflake) {
  * @param email
  * @param code
  */
-async function createAndReturnProfile(guildMember: GuildMember, email: String, code: Number) {
+async function createAndReturnProfile(guildMember: GuildMember, email: string, code: number) {
     let name;
+    let user;
     let id;
 
     name = guildMember.user.username;
     id = guildMember.id;
+    user = new newUser(id, name, email, code, false);
+    await newUser.post(user);
 
-    await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE, `New User Created:\nMember: ${userMention(id)}\nId: ${id}\nEmail: ${email}`))
-    return await User.create({ username: name, email: email, id: id, code: code})
+    await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE, `New User Created:\nMember: ${userMention(user.id)}\nId: ${id}\nEmail: ${user.email}`))
+    return user;
 }
 
 /**

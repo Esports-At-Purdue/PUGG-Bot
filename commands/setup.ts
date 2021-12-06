@@ -73,6 +73,7 @@ module.exports = {
 function buildVerificationMenu(interaction) {
     let embed = new MessageEmbed()
         .setTitle("Server Roles Menu")
+        .setColor("#f1c40f")
         .setDescription("Indicate your affiliation with Purdue. The Purdue role requires email verification. You must apply either the Purdue role or Non-Purdue role in order to access public channels.");
 
     let row = new MessageActionRow()
@@ -91,7 +92,8 @@ function buildVerificationMenu(interaction) {
 
 function buildEsportsMenu(interaction) {
     let embed = new MessageEmbed()
-        .setTitle("Esports Roles Menu")
+        .setTitle("Purdue Esports Roles Menu")
+        .setColor("#f1c40f")
         .setDescription("If you play on a competitive esports team for Purdue, select any of the positions to open a request ticket. If multiple positions apply to you, communicate that in your ticket.");
 
     let row = new MessageActionRow()
@@ -120,6 +122,7 @@ async function buildGamesMenu(interaction) {
     rows = await buildGamesRows();
     embed = new MessageEmbed()
         .setTitle("Game Selection Menu")
+        .setColor("#f1c40f")
         .setDescription("Select any game to apply the role to yourself!");
 
     interaction.reply({ embeds: [embed], components: rows });
@@ -128,6 +131,7 @@ async function buildGamesMenu(interaction) {
 async function buildPlatformsMenu(interaction) {
     let embed = new MessageEmbed()
         .setTitle("Platform Button Menu")
+        .setColor("#f1c40f")
         .setDescription("Select any of the platforms you game on!");
 
     let row = new MessageActionRow();
@@ -150,6 +154,7 @@ async function buildPlatformsMenu(interaction) {
 async function buildGenresMenu(interaction) {
     let embed = new MessageEmbed()
         .setTitle("Genres Button Menu")
+        .setColor("#f1c40f")
         .setDescription("Select any of the game genres that you enjoy!");
 
     let row = new MessageActionRow();

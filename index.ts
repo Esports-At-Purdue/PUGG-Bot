@@ -90,7 +90,7 @@ client.on('guildMemberAdd', async guildMember => {
 client.on('guildMemberRemove', async guildMember => {
     const guild = await client.guilds.fetch(guild_id);
     const channel = await guild.channels.fetch(leave_channel) as TextChannel;
-    await channel.send({content: `${guildMember.user.username} has left.`})
+    await channel.send({content: `**${guildMember.user.username}** has left.`})
 })
 
 /**
@@ -284,7 +284,9 @@ async function checkIfMemberHasRole(snowflake: Snowflake, guildMember: GuildMemb
  */
 async function sendLogToDiscord(log: Log) {
     let guild = await client.guilds.fetch(guild_id) as Guild;
+    console.log(guild.name);
     let channel = await guild.channels.fetch(log_channel) as TextChannel;
+    console.log(channel.name);
     let embed = new MessageEmbed().setTitle(log.type).setDescription(log.message).setTimestamp(log.time).setColor(log.color);
 
     await channel.send({embeds: [embed]});

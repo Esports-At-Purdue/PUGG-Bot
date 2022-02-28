@@ -1,16 +1,14 @@
 import {
-    Client,
     CommandInteraction,
     MessageActionRow,
     MessageButton,
     MessageEmbed,
     MessageSelectMenu,
-    Permissions, Snowflake
+    Permissions
 } from 'discord.js'
 import { SlashCommandBuilder } from '@discordjs/builders'
-import { game_roles, platform_roles, genre_roles, server_roles, esports_roles, officer_roles }from '../jsons/roles.json'
-import {guild_id} from '../config.json';
-import {client} from "../index";
+import * as config from '../config.json';
+import {bot} from "../index";
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -25,7 +23,32 @@ module.exports = {
                 .addChoice('esports', 'esports_menu')
                 .addChoice('games', 'games_menu')
                 .addChoice('platforms', 'platform_menu')
-                .addChoice('genres', 'genre_menu')),
+                .addChoice('genres', 'genre_menu')
+        ),
+
+    permissions: [
+        {
+            id: config.roles.president,
+            type: 'ROLE',
+            permission: true
+        },
+        {
+            id: config.roles.pugg_officer,
+            type: 'ROLE',
+            permission: true
+        },
+        {
+            id: config.roles.esports_officer,
+            type: 'ROLE',
+            permission: true
+        },
+        {
+            id: config.roles.casual_officer,
+            type: 'ROLE',
+            permission: true
+        }
+    ],
+
     async execute(interaction: CommandInteraction) {
         let menu_name = interaction.options.getString('menu_name');
         let guild = interaction.guild;
@@ -51,22 +74,6 @@ module.exports = {
                 interaction.reply({content: 'Sorry, you do not have permission to do this!', ephemeral: true});
             }
         })
-    },
-    async setPermissions(client: Client, commandId: Snowflake) {
-        let guild = await client.guilds.fetch(guild_id);
-        let commandPermissionsManager = guild.commands.permissions;
-
-        for (let role in officer_roles) {
-            await commandPermissionsManager.add({
-                command: commandId, permissions: [
-                    {
-                        id: officer_roles[role].id,
-                        type: 'ROLE',
-                        permission: true
-                    },
-                ]
-            })
-        }
     }
 }
 
@@ -79,11 +86,11 @@ function buildVerificationMenu(interaction) {
     let row = new MessageActionRow()
         .addComponents(
             new MessageButton()
-                .setCustomId(server_roles["purdue"]["id"])
+                .setCustomId(config.roles.purdue)
                 .setLabel('Purdue')
                 .setStyle('PRIMARY'),
             new MessageButton()
-                .setCustomId(server_roles["non_purdue"]["id"])
+                .setCustomId(config.roles["non-purdue"])
                 .setLabel('Non-Purdue')
                 .setStyle('SECONDARY'),
         );
@@ -99,15 +106,15 @@ function buildEsportsMenu(interaction) {
     let row = new MessageActionRow()
         .addComponents(
             new MessageButton()
-                .setCustomId(esports_roles["coach"]["id"])
+                .setCustomId(config.roles.coach)
                 .setLabel('Coach')
                 .setStyle('PRIMARY'),
             new MessageButton()
-                .setCustomId(esports_roles["captain"]["id"])
+                .setCustomId(config.roles.captain)
                 .setLabel('Captain')
                 .setStyle('PRIMARY'),
             new MessageButton()
-                .setCustomId(esports_roles["player"]["id"])
+                .setCustomId(config.roles.player)
                 .setLabel('Player')
                 .setStyle('PRIMARY')
         );
@@ -136,8 +143,8 @@ async function buildPlatformsMenu(interaction) {
 
     let row = new MessageActionRow();
 
-    for (const role of platform_roles) {
-        let emoji_guild = await client.guilds.fetch('811651620856135731');
+    for (const role of config.platform_roles) {
+        let emoji_guild = await bot.guilds.fetch(config.emote_guild);
         let emoji = await emoji_guild.emojis.fetch(role["emote_id"]);
         row.addComponents(
             new MessageButton()
@@ -159,8 +166,8 @@ async function buildGenresMenu(interaction) {
 
     let row = new MessageActionRow();
 
-    for (const role of genre_roles) {
-        let emoji_guild = await client.guilds.fetch('811651620856135731');
+    for (const role of config.genre_roles) {
+        let emoji_guild = await bot.guilds.fetch(config.emote_guild);
         let emoji = await emoji_guild.emojis.fetch(role["emote_id"]);
         row.addComponents(
             new MessageButton()
@@ -176,7 +183,7 @@ async function buildGenresMenu(interaction) {
 
 async function buildGamesRows() {
     let rows = [];
-    let games = sortGames(game_roles);
+    let games = sortGames(config.game_roles);
     for (let i = 0; i < Math.ceil(games.length / 25); i++) {
         let actionRow = new MessageActionRow()
         let selectMenu = new MessageSelectMenu()
@@ -185,7 +192,7 @@ async function buildGamesRows() {
 
         for (let j = i * 25; j < (i * 25) + 25; j++) {
             if (games[j] !== undefined) {
-                let emoji_guild = await client.guilds.fetch('811651620856135731');
+                let emoji_guild = await bot.guilds.fetch(config.emote_guild);
                 let emoji = await emoji_guild.emojis.fetch(games[j]["emote_id"]);
                 selectMenu.addOptions([
                     {

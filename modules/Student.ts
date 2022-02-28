@@ -1,6 +1,6 @@
-import {collections} from "./services/database.service";
+import {collections} from "../services/database.service";
 
-export default class newUser {
+export default class Student {
     private _id: string;
     private _username: string;
     private _email: string;
@@ -16,7 +16,7 @@ export default class newUser {
     }
 
     static fromObject(object) {
-        return new newUser(object._id, object._username, object._email, object._code, object._status);
+        return new Student(object._id, object._username, object._email, object._code, object._status);
     }
 
     get id(): string {
@@ -62,21 +62,21 @@ export default class newUser {
     static async get(id: string) {
         try {
             const query = { _id: id };
-            const user = newUser.fromObject(await collections.users.findOne(query));
+            const student = Student.fromObject(await collections.students.findOne(query));
 
-            if (user) {
-                return user;
+            if (student) {
+                return student;
             }
         } catch (error) {
             return undefined;
         }
     }
 
-    static async post(user: newUser) {
+    static async post(student: Student) {
         try {
-            const newUser = (user);
+            const Student = (student);
             // @ts-ignore
-            return await collections.users.insertOne(newUser);
+            return await collections.students.insertOne(Student);
 
         } catch (error) {
             console.error(error);
@@ -84,11 +84,11 @@ export default class newUser {
         }
     }
 
-    static async put(user: newUser) {
-        await collections.users.updateOne({ _id: (user.id) }, { $set: user });
+    static async put(student: Student) {
+        await collections.students.updateOne({ _id: (student.id) }, { $set: student });
     }
 
-    static async delete(user: newUser) {
-        await collections.users.deleteOne({ _id: (user.id) });
+    static async delete(student: Student) {
+        await collections.students.deleteOne({ _id: (student.id) });
     }
 }

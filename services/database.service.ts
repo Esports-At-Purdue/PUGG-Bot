@@ -1,7 +1,8 @@
 import * as mongoDB from "mongodb";
 import * as dotenv from "dotenv";
+import {bot} from "../index";
 
-export const collections: { users?: mongoDB.Collection, tickets?: mongoDB.Collection } = {}
+export const collections: { users?: mongoDB.Collection, tickets?: mongoDB.Collection, students?: mongoDB.Collection } = {}
 
 export async function connectToDatabase () {
     dotenv.config();
@@ -12,11 +13,11 @@ export async function connectToDatabase () {
 
     const db: mongoDB.Db = client.db("PUGG");
 
-    const usersCollection: mongoDB.Collection = db.collection("users");
     const ticketCollection: mongoDB.Collection = db.collection("tickets");
+    const studentCollection: mongoDB.Collection = db.collection("students");
 
-    collections.users = usersCollection;
     collections.tickets = ticketCollection;
+    collections.students = studentCollection;
 
-    console.log(`Successfully connected to database: ${db.databaseName} and collections: ${usersCollection.collectionName}, ${ticketCollection.collectionName}`);
+    await bot.logger.info(`Connected to ${db.databaseName} Database`);
 }

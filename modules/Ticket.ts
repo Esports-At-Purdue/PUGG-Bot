@@ -1,15 +1,14 @@
 import {DataTypes, Model} from "sequelize";
 import {sequelize} from "./Database";
-import {support_category, ticket_log_channel} from "../config.json";
+import * as config from "../config.json";
 import {channelMention, userMention} from "@discordjs/builders";
-import {sendLogToDiscord} from '../index';
 import {
     ButtonInteraction, CategoryChannel,
     GuildMember, MessageActionRow,
     MessageButton, MessageEmbed,
     Role, Snowflake, TextChannel
 } from "discord.js";
-import {Log, LogType} from "./Log";
+import {bot} from "../index";
 
 /**
  * Ticket Class
@@ -101,7 +100,7 @@ async function tryToCloseEsportsTicket(interaction: ButtonInteraction) {
     ticket.status = false;
     ticket.content = channelMessages;
     await logTicket(ticket, guildMember);
-    await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE, `Ticket Updated:\nStatus: Closed\nOwner: ${userMention(ticket.ownerId)}`));
+    await bot.logger.info(`Ticket closed by ${guildMember.nickname}`)
     await ticket.save();
     await ticketChannel.delete();
 }
@@ -113,7 +112,7 @@ async function tryToCloseEsportsTicket(interaction: ButtonInteraction) {
  */
 async function createTicketChannel(guildMember: GuildMember, role: Role) {
     let guild = guildMember.guild;
-    let ticketCategory = await guild.channels.fetch(support_category) as CategoryChannel;
+    let ticketCategory = await guild.channels.fetch(config.support_category) as CategoryChannel;
 
     return await ticketCategory.createChannel(`${guildMember.user.username}-${role.name}`, {
         type: "GUILD_TEXT",
@@ -135,7 +134,8 @@ async function createTicketChannel(guildMember: GuildMember, role: Role) {
  * @param channelId
  */
 async function createTicket(ownerId: Snowflake, channelId: Snowflake) {
-    await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE, `New Ticket Created\nChannel: ${channelMention(channelId)}\nOwner: ${userMention(ownerId)}`));
+    const member = await bot.guild.members.fetch(ownerId);
+    await bot.logger.info(`New Ticket Created by ${member.nickname}`)
     return Ticket.create({ownerId: ownerId, channelId: channelId});
 }
 
@@ -155,7 +155,7 @@ async function getOpenTickets(guildMember: GuildMember) {
 async function logTicket(ticket: Ticket, guildMember: GuildMember) {
     let status = ticket.status;
     let channelId = ticket.channelId;
-    let logChannel = await guildMember.guild.channels.fetch(ticket_log_channel) as TextChannel;
+    let logChannel = await guildMember.guild.channels.fetch(config.channels.ticket_log_channel) as TextChannel;
     let embed = new MessageEmbed();
 
     if (status) {

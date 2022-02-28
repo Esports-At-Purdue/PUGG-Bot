@@ -1,141 +1,86 @@
-import * as fs from 'fs';
-import * as readline from 'readline';
-import {REST} from '@discordjs/rest';
-import {Routes} from 'discord-api-types/v9';
 import {roleMention} from '@discordjs/builders'
 import {
-    Client, Intents,
-    Collection, Snowflake,
     ButtonInteraction,
+    Client,
     CommandInteraction,
+    GuildMember,
+    Role,
     SelectMenuInteraction,
-    GuildMember, Role, ApplicationCommand, MessageEmbed, Guild, TextChannel
+    Snowflake,
+    TextChannel
 } from 'discord.js';
-import {token, guild_id, client_id, log_channel_id} from './config.json';
-import {server_roles} from './jsons/roles.json';
+import * as config from './config.json';
 import {synchronize} from './modules/Database';
-import {Log, LogType} from './modules/Log';
 import {tryToCloseEsportsTicket, tryToOpenEsportsTicket} from "./modules/Ticket";
+import Bot from "./modules/Bot";
 
-const client = new Client({
-    intents:
-        [
-            Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MEMBERS,
-            Intents.FLAGS.GUILD_BANS, Intents.FLAGS.GUILD_MESSAGES,
-            Intents.FLAGS.GUILD_MESSAGE_REACTIONS, Intents.FLAGS.DIRECT_MESSAGES,
-            Intents.FLAGS.DIRECT_MESSAGE_REACTIONS
-        ]
+export const bot = new Bot();
+
+bot.login(config.token).then(async () => {
+    await bot.init();
 });
 
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
-const rest = new REST({ version: '9' }).setToken(token);
-client["commands"] = new Collection();
-
-client.on('ready', async () => {
-    await setRichPresence(client);
-    await sendLogToDiscord(new Log(LogType.RESTART, 'Bot has been Restarted!'));
+bot.on('ready', async () => {
+    await setRichPresence(bot);
     await synchronize();
+    global.setInterval(async () => {
+        bot.guild = await bot.guilds.fetch(config.guild);
+    }, 600000)
 });
 
-client.login(token).then(async () => {
-    let commands = [];
-
-    //Collect and Register Commands
-    await collectAndSetCommandFiles(commands, commandFiles);
-    await registerClientCommands(commands);
-
-    //Readline
-    await listenForStopCommand();
-});
-
-client.on('interactionCreate', async interaction => {
-    /*
-    try {
+bot.on('interactionCreate', async interaction => {
         //Sort Interactions
         if (interaction.isButton()) await receiveButton(interaction);
         if (interaction.isSelectMenu()) await receiveSelectMenu(interaction);
         if (interaction.isCommand()) await receiveCommand(interaction);
-        await sendLogToDiscord(new Log(LogType.INTERACTION, `Successful ${interaction.type}`));
-    } catch(error) {
-        await sendLogToDiscord(new Log(LogType.ERROR, `${interaction.type}: ${error}\n
-        Channel: ${channelMention(interaction.channelId)}\n
-        User: ${userMention(interaction.user.id)}`));
-    }
-     */
-    if (interaction.isButton()) await receiveButton(interaction);
-    if (interaction.isSelectMenu()) await receiveSelectMenu(interaction);
-    if (interaction.isCommand()) await receiveCommand(interaction);
-    await sendLogToDiscord(new Log(LogType.INTERACTION, `Successful ${interaction.type}`));
 });
 
-/**
- * Takes data from commands files (./commands/**) and set's them as client's commands
- * @param commands
- * @param commandFiles
- */
-async function collectAndSetCommandFiles(commands, commandFiles) {
-    for (let commandFile of commandFiles) {
-        let command = require(`./commands/${commandFile}`);
-        commands.push(command.data.toJSON());
-        await client["commands"].set(command.data.name, command);
-    }
-}
+bot.on('guildMemberAdd', async guildMember => {
+    const channel = await bot.guild.channels.fetch(config.channels.join_channel) as TextChannel;
+    await channel.send({content: `${guildMember.user} has joined. Index: ${bot.guild.memberCount}`});
+});
 
-/**
- * Takes commands and registers them with Discord Restful API, then sets their permissions
- * @param commands
- */
-async function registerClientCommands(commands) {
-    try {
-        console.log('Started refreshing application (/) commands.');
-
-        await rest.put(
-            Routes.applicationGuildCommands(client_id, guild_id),
-            {body: commands},
-        );
-
-        let guildCommands = await rest.get(Routes.applicationGuildCommands(client_id, guild_id)) as Array <ApplicationCommand>;
-
-        for (let guildCommand of guildCommands) {
-            let command = client["commands"].get(guildCommand.name);
-            await command.setPermissions(client, guildCommand.id);
-        }
-
-        console.log('Successfully reloaded application (/) commands.');
-    } catch (error) {
-        console.error(error);
-    }
-}
+bot.on('guildMemberRemove', async guildMember => {
+    const channel = await bot.guild.channels.fetch(config.channels.leave_channel) as TextChannel;
+    await channel.send({content: `**${guildMember.user.username}** has left.`})
+})
 
 /**
  * Executes logic on a Command Interaction
  * @param interaction
  */
 async function receiveCommand(interaction: CommandInteraction) {
-    const command = client["commands"].get(interaction.commandName);
+    const command = bot.commands.get(interaction.commandName);
 
     if (!command) return;
 
     try {
         await command.execute(interaction);
+        await bot.logger.info(`${interaction.commandName} command issued by ${interaction.user.username}`);
     } catch (error) {
-        await sendLogToDiscord(new Log(LogType.ERROR, error));
+        await bot.logger.error(`${interaction.commandName} command issued by ${interaction.user.username} failed`, error);
     }
 }
 
+
 /**
  * Executes logic on a Button Interaction
- * @param interaction
+ * @param button
  */
-async function receiveButton(interaction: ButtonInteraction) {
-    let id = interaction.customId;
+async function receiveButton(button: ButtonInteraction) {
+    let id = button.customId;
 
-    if (id === 'close_ticket') await tryToCloseEsportsTicket(interaction);
-    else {
-        let role = await interaction.guild.roles.fetch(id);
-        let guildMember = interaction.member as GuildMember;
-        let response = await requestRole(role, guildMember, interaction);
-        response ? await interaction.reply({content: response, ephemeral: true}) : 0;
+    try {
+        if (id === 'close_ticket') await tryToCloseEsportsTicket(button);
+        else {
+            let role = await button.guild.roles.fetch(id);
+            let guildMember = button.member as GuildMember;
+            let response = await requestRole(role, guildMember, button);
+            response ? await button.reply({content: response, ephemeral: true}) : 0;
+        }
+        await bot.logger.info(`${button.component.label} button used by ${button.user.username}`);
+    } catch (error) {
+        await bot.logger.error(`${button.component.label} button used by ${button.user.username} failed`, error);
     }
 }
 
@@ -148,12 +93,17 @@ async function receiveSelectMenu(interaction: SelectMenuInteraction) {
     let guildMember = interaction.member as GuildMember;
     let hasRole = await checkIfMemberHasRole(roleId, guildMember);
 
-    if (!hasRole) {
-        await addRoleToMember(roleId, guildMember);
-        return (`You successfully applied the role **${roleMention(roleId)}** to yourself.`);
-    } else {
-        await removeRoleFromMember(roleId, guildMember);
-        return (`You successfully removed the role **${roleMention(roleId)}** from yourself.`);
+    try {
+        if (!hasRole) {
+            await addRoleToMember(roleId, guildMember);
+            await interaction.reply({content: `You successfully applied the role **${roleMention(roleId)}** to yourself.`, ephemeral: true});
+        } else {
+            await removeRoleFromMember(roleId, guildMember);
+            await interaction.reply({content: `You successfully removed the role **${roleMention(roleId)}** from yourself.`, ephemeral: true});
+        }
+        await bot.logger.info(`Select Menu option ${interaction.component.options[0].label} selected by ${interaction.user.username}`);
+    } catch (error) {
+        await bot.logger.error(`Select Menu option ${interaction.component.options[0].label} selected by ${interaction.user.username} failed`, error);
     }
 }
 
@@ -165,7 +115,7 @@ async function receiveSelectMenu(interaction: SelectMenuInteraction) {
  */
 async function requestRole(role: Role, guildMember: GuildMember, interaction: ButtonInteraction) {
     let hasRole = await checkIfMemberHasRole(role.id, guildMember);
-    let hasPurdueRole = await checkIfMemberHasRole(server_roles["purdue"]["id"], guildMember);
+    let hasPurdueRole = await checkIfMemberHasRole(config.roles.purdue, guildMember);
 
     switch (role.name) {
         case 'Coach':
@@ -205,13 +155,13 @@ async function requestRole(role: Role, guildMember: GuildMember, interaction: Bu
 
 /**
  * Sets game status for Bot Client
- * @param client
+ * @param bot
  */
-async function setRichPresence(client: Client) {
+async function setRichPresence(bot: Client) {
     let user;
     let activity;
 
-    user = client.user;
+    user = bot.user;
     activity = {
         name: 'GRIT™',
         type: 'PLAYING'
@@ -253,40 +203,27 @@ async function checkIfMemberHasRole(snowflake: Snowflake, guildMember: GuildMemb
     return result;
 }
 
-/**
- * Sends a log to the discord developer channel
- * @param log
- */
-async function sendLogToDiscord(log: Log) {
-    let guild = await client.guilds.fetch(guild_id) as Guild;
-    let channel = await guild.channels.fetch(log_channel_id) as TextChannel;
-    let embed = new MessageEmbed().setTitle(log.type).setDescription(log.message).setTimestamp(log.time).setColor(log.color);
+/*
+async function migrateData() {
+    const sqlUsers = await User.findAll();
 
-    await channel.send({embeds: [embed]});
-}
-
-/**
- * Listens for a command 'stop' in console, which will shutdown the bot
- */
-async function listenForStopCommand() {
-    const consoleInterface = await createInterface();
-    consoleInterface.question('', function (command) {
-        if (command === 'stop') {
-            process.exit(0);
+    for (const sqlUser of sqlUsers) {
+        const userTemplate = {
+            _id: sqlUser.id.toString(),
+            _username: sqlUser.username.toString(),
+            _email: sqlUser.email.toString(),
+            _code: sqlUser.code,
+            _status: sqlUser.status
         }
-    });
-}
 
-/**
- * Initializes console interface for listening to commands
+        try {
+            const user = newUser.fromObject(userTemplate);
+            await newUser.post(user);
+            await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE,`Successfully migrated ${user.username}`));
+        } catch (error) {
+
+        }
+
+    }
+}
  */
-async function createInterface() {
-    return readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    })
-}
-
-export {
-    sendLogToDiscord
-}

@@ -1,15 +1,14 @@
 import {
-    Client,
     CommandInteraction,
     MessageActionRow,
     MessageButton,
     MessageEmbed,
     MessageSelectMenu,
-    Permissions, Snowflake
+    Permissions
 } from 'discord.js'
 import { SlashCommandBuilder } from '@discordjs/builders'
-import { game_roles, platform_roles, genre_roles, server_roles, esports_roles, officer_roles }from '../jsons/roles.json'
-import {guild_id} from '../config.json';
+import * as config from '../config.json';
+import {bot} from "../index";
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -24,7 +23,32 @@ module.exports = {
                 .addChoice('esports', 'esports_menu')
                 .addChoice('games', 'games_menu')
                 .addChoice('platforms', 'platform_menu')
-                .addChoice('genres', 'genre_menu')),
+                .addChoice('genres', 'genre_menu')
+        ),
+
+    permissions: [
+        {
+            id: config.roles.president,
+            type: 'ROLE',
+            permission: true
+        },
+        {
+            id: config.roles.pugg_officer,
+            type: 'ROLE',
+            permission: true
+        },
+        {
+            id: config.roles.esports_officer,
+            type: 'ROLE',
+            permission: true
+        },
+        {
+            id: config.roles.casual_officer,
+            type: 'ROLE',
+            permission: true
+        }
+    ],
+
     async execute(interaction: CommandInteraction) {
         let menu_name = interaction.options.getString('menu_name');
         let guild = interaction.guild;
@@ -50,38 +74,23 @@ module.exports = {
                 interaction.reply({content: 'Sorry, you do not have permission to do this!', ephemeral: true});
             }
         })
-    },
-    async setPermissions(client: Client, commandId: Snowflake) {
-        let guild = await client.guilds.fetch(guild_id);
-        let commandPermissionsManager = guild.commands.permissions;
-
-        for (let role in officer_roles) {
-            await commandPermissionsManager.add({
-                command: commandId, permissions: [
-                    {
-                        id: officer_roles[role].id,
-                        type: 'ROLE',
-                        permission: true
-                    },
-                ]
-            })
-        }
     }
 }
 
 function buildVerificationMenu(interaction) {
     let embed = new MessageEmbed()
         .setTitle("Server Roles Menu")
+        .setColor("#f1c40f")
         .setDescription("Indicate your affiliation with Purdue. The Purdue role requires email verification. You must apply either the Purdue role or Non-Purdue role in order to access public channels.");
 
     let row = new MessageActionRow()
         .addComponents(
             new MessageButton()
-                .setCustomId(server_roles["purdue"]["id"])
+                .setCustomId(config.roles.purdue)
                 .setLabel('Purdue')
                 .setStyle('PRIMARY'),
             new MessageButton()
-                .setCustomId(server_roles["non_purdue"]["id"])
+                .setCustomId(config.roles["non-purdue"])
                 .setLabel('Non-Purdue')
                 .setStyle('SECONDARY'),
         );
@@ -90,21 +99,22 @@ function buildVerificationMenu(interaction) {
 
 function buildEsportsMenu(interaction) {
     let embed = new MessageEmbed()
-        .setTitle("Esports Roles Menu")
+        .setTitle("Purdue Esports Roles Menu")
+        .setColor("#f1c40f")
         .setDescription("If you play on a competitive esports team for Purdue, select any of the positions to open a request ticket. If multiple positions apply to you, communicate that in your ticket.");
 
     let row = new MessageActionRow()
         .addComponents(
             new MessageButton()
-                .setCustomId(esports_roles["coach"]["id"])
+                .setCustomId(config.roles.coach)
                 .setLabel('Coach')
                 .setStyle('PRIMARY'),
             new MessageButton()
-                .setCustomId(esports_roles["captain"]["id"])
+                .setCustomId(config.roles.captain)
                 .setLabel('Captain')
                 .setStyle('PRIMARY'),
             new MessageButton()
-                .setCustomId(esports_roles["player"]["id"])
+                .setCustomId(config.roles.player)
                 .setLabel('Player')
                 .setStyle('PRIMARY')
         );
@@ -112,71 +122,85 @@ function buildEsportsMenu(interaction) {
     interaction.reply({ embeds: [embed] , components: [row] });
 }
 
-function buildGamesMenu(interaction) {
+async function buildGamesMenu(interaction) {
     let rows;
     let embed;
 
-    rows = buildGamesRows();
+    rows = await buildGamesRows();
     embed = new MessageEmbed()
         .setTitle("Game Selection Menu")
+        .setColor("#f1c40f")
         .setDescription("Select any game to apply the role to yourself!");
 
     interaction.reply({ embeds: [embed], components: rows });
 }
 
-function buildPlatformsMenu(interaction) {
+async function buildPlatformsMenu(interaction) {
     let embed = new MessageEmbed()
         .setTitle("Platform Button Menu")
+        .setColor("#f1c40f")
         .setDescription("Select any of the platforms you game on!");
 
-    let row = new MessageActionRow()
-    platform_roles.forEach(role => {
+    let row = new MessageActionRow();
+
+    for (const role of config.platform_roles) {
+        let emoji_guild = await bot.guilds.fetch(config.emote_guild);
+        let emoji = await emoji_guild.emojis.fetch(role["emote_id"]);
         row.addComponents(
             new MessageButton()
                 .setCustomId(`${role.id}`)
                 .setLabel(`${role.name}`)
                 .setStyle('SECONDARY')
-        );
-    })
+                .setEmoji(emoji)
+        )
+    }
 
-    interaction.reply({ embeds: [embed] , components: [row] });
+    interaction.reply({embeds: [embed], components: [row]});
 }
 
-function buildGenresMenu(interaction) {
+async function buildGenresMenu(interaction) {
     let embed = new MessageEmbed()
         .setTitle("Genres Button Menu")
+        .setColor("#f1c40f")
         .setDescription("Select any of the game genres that you enjoy!");
 
-    let row = new MessageActionRow()
+    let row = new MessageActionRow();
 
-    genre_roles.forEach(role => {
+    for (const role of config.genre_roles) {
+        let emoji_guild = await bot.guilds.fetch(config.emote_guild);
+        let emoji = await emoji_guild.emojis.fetch(role["emote_id"]);
         row.addComponents(
             new MessageButton()
                 .setCustomId(`${role.id}`)
                 .setLabel(`${role.name}`)
                 .setStyle('SECONDARY')
+                .setEmoji(emoji)
         )
-    })
+    }
+
     interaction.reply({ embeds: [embed] , components: [row] });
 }
 
-function buildGamesRows() {
+async function buildGamesRows() {
     let rows = [];
-    let games = sortGames(game_roles);
+    let games = sortGames(config.game_roles);
     for (let i = 0; i < Math.ceil(games.length / 25); i++) {
         let actionRow = new MessageActionRow()
         let selectMenu = new MessageSelectMenu()
-            .setCustomId(`games_${i}`)
-            .setPlaceholder('Select Games');
+            .setCustomId(`select_${i}`)
+            .setPlaceholder('Select your favorite games!');
 
         for (let j = i * 25; j < (i * 25) + 25; j++) {
             if (games[j] !== undefined) {
+                let emoji_guild = await bot.guilds.fetch(config.emote_guild);
+                let emoji = await emoji_guild.emojis.fetch(games[j]["emote_id"]);
                 selectMenu.addOptions([
                     {
                         label: `${games[j]["name"]}`,
-                        value: `${games[j]["id"]}`
+                        value: `${games[j]["id"]}`,
+                        emoji: emoji
                     }
-                ])
+                ]);
             }
         }
         actionRow.addComponents(selectMenu);

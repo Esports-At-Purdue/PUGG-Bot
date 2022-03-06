@@ -1,6 +1,6 @@
 import {SlashCommandBuilder} from '@discordjs/builders'
 import * as nodemailer from 'nodemailer';
-import {CommandInteraction, GuildMember, Snowflake} from "discord.js";
+import {CommandInteraction, GuildMember} from "discord.js";
 import * as config from "../config.json";
 import Student from "../modules/Student";
 import {bot} from "../index";
@@ -9,7 +9,7 @@ import {collections} from "../services/database.service";
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('verify')
-        .setDescription('Initiates Purdue email verification process.')
+        .setDescription('Initiates Purdue email verification process')
         .setDefaultPermission(false)
 
         // add - subcommand
@@ -45,18 +45,21 @@ module.exports = {
     async execute(interaction: CommandInteraction) {
         let subcommand = interaction.options.getSubcommand();
         let guildMember = interaction.member as GuildMember;
+        let student = await Student.get(guildMember.id);
 
         if (subcommand == "start") {
             let emailAddress = interaction.options.getString('email');
-            let isAlreadyVerified = await checkIfProfileVerified(guildMember.id);
-            let isValidEmailAddress = validateEmail(emailAddress);
-
-            if (isAlreadyVerified) {
-                await interaction.reply({content: "You have already been verified.", ephemeral: true});
-                let purdueRole = await guildMember.guild.roles.fetch(config.roles.purdue);
-                await guildMember.roles.add(purdueRole);
-            } else if ((await collections.students.findOne({_email: emailAddress})) != null) await interaction.reply({content: "This email is already in use.", ephemeral: true});
-            else if (isValidEmailAddress) await finishAuthentication(interaction, guildMember, emailAddress);
+            let emailInUse = (await collections.students.findOne({_email: emailAddress})) != null;
+            if (student) {
+                if (student.status) {
+                    await interaction.reply({content: "You have already been verified.", ephemeral: true});
+                    let purdueRole = await guildMember.guild.roles.fetch(config.roles.purdue);
+                    await guildMember.roles.add(purdueRole);
+                } else {
+                    await interaction.reply({content: "Please finish verification with /verify complete and the code I emailed you.", ephemeral: true});
+                }
+            } else if (emailInUse) await interaction.reply({content: "This email is already in use.", ephemeral: true});
+            else if (isValidEmail(emailAddress)) await finishAuthentication(interaction, guildMember, emailAddress);
             else {
                 await interaction.reply({
                     content: `The email you provided, ${emailAddress}, was invalid. Please use a valid Purdue email or Alumni email.`,
@@ -99,28 +102,35 @@ module.exports = {
  * @param emailAddress
  */
 async function finishAuthentication(interaction, guildMember, emailAddress) {
-    let code;
-    let user;
-    let id;
-
-    code = generateAuthCode();
-    id = guildMember.id;
-    user = await Student.get(id);
+    let id = guildMember.id;
+    let username = guildMember.user.username;
+    let user = await Student.get(id);
+    let code = generateAuthCode();
 
     await sendEmail(emailAddress, code);
     if (user) {
+        user.username = username;
         user.code = code;
         user.email = emailAddress;
         await Student.put(user);
     } else {
-        await createAndReturnProfile(guildMember, emailAddress, code)
+        await Student.post(new Student(id, username, emailAddress, code, false));
+        await bot.logger.info(`New Student Registered - Username: ${username}`)
     }
 
     return interaction.reply({
         content: `A confirmation email containing your one-time code was sent to \`${emailAddress}\`.`,
         ephemeral: true
     });
+}
 
+async function activateProfile(student: Student, guildMember) {
+    let purdueRole = await guildMember.guild.roles.fetch(config.roles.purdue);
+    student.status = true;
+    student.code = 0;
+    await bot.logger.info(`Student Verified - Username: ${student.username}`);
+    await Student.put(student);
+    guildMember.roles.add(purdueRole);
 }
 
 /**
@@ -156,7 +166,7 @@ async function sendEmail(email, code) {
  * Parses the provided email address and confirms that is valid
  * @param emailAddress
  */
-function validateEmail(emailAddress) {
+function isValidEmail(emailAddress): boolean {
     let emailRegExFilter;
     let filteredAddress = '';
 
@@ -169,51 +179,9 @@ function validateEmail(emailAddress) {
 }
 
 /**
- * Checks whether a User entry exists for a GuildMember
- * @param snowflake
- */
-async function checkIfProfileVerified(snowflake: Snowflake) {
-    let student;
-    let result;
-
-    student = await Student.get(snowflake);
-    result = student ? student.status : false;
-
-    return result;
-}
-
-/**
- * Creates a new User from provided GuildMember, Email, and Auth Code
- * @param guildMember
- * @param email
- * @param code
- */
-async function createAndReturnProfile(guildMember: GuildMember, email: string, code: number) {
-    let name;
-    let student;
-    let id;
-
-    name = guildMember.user.username;
-    id = guildMember.id;
-    student = new Student(id, name, email, code, false);
-    await Student.post(student);
-
-    await bot.logger.info(`New Student Registered - Username: ${name}`);
-    return student;
-}
-
-/**
  * Generates a random 6 digit code
  */
 function generateAuthCode() {
     return Math.floor(100000 + Math.random() * 900000);
 }
 
-async function activateProfile(student: Student, guildMember) {
-    let purdueRole = await guildMember.guild.roles.fetch(config.roles.purdue);
-    student.status = true;
-    student.code = 0;
-    await bot.logger.info(`Student Verified - Username: ${student.username}`);
-    await Student.put(student);
-    guildMember.roles.add(purdueRole);
-}

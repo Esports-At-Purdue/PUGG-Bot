@@ -62,7 +62,6 @@ async function receiveCommand(interaction: CommandInteraction) {
     }
 }
 
-
 /**
  * Executes logic on a Button Interaction
  * @param button
@@ -202,28 +201,3 @@ async function checkIfMemberHasRole(snowflake: Snowflake, guildMember: GuildMemb
     })
     return result;
 }
-
-/*
-async function migrateData() {
-    const sqlUsers = await User.findAll();
-
-    for (const sqlUser of sqlUsers) {
-        const userTemplate = {
-            _id: sqlUser.id.toString(),
-            _username: sqlUser.username.toString(),
-            _email: sqlUser.email.toString(),
-            _code: sqlUser.code,
-            _status: sqlUser.status
-        }
-
-        try {
-            const user = newUser.fromObject(userTemplate);
-            await newUser.post(user);
-            await sendLogToDiscord(new Log(LogType.DATABASE_UPDATE,`Successfully migrated ${user.username}`));
-        } catch (error) {
-
-        }
-
-    }
-}
- */

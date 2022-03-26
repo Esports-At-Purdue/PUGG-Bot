@@ -3,8 +3,8 @@ import * as nodemailer from 'nodemailer';
 import {CommandInteraction, GuildMember} from "discord.js";
 import * as config from "../config.json";
 import Student from "../modules/Student";
-import {bot} from "../index";
 import {collections} from "../services/database.service";
+import {bot} from "../index";
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -12,7 +12,7 @@ module.exports = {
         .setDescription('Initiates Purdue email verification process')
         .setDefaultPermission(false)
 
-        // add - subcommand
+        // start - subcommand
         .addSubcommand((command) => command
             .setName('start')
             .setDescription('Command to initiate verification')
@@ -23,7 +23,7 @@ module.exports = {
             )
         )
 
-        // remove - subcommand
+        // complete - subcommand
         .addSubcommand((command) => command
             .setName('complete')
             .setDescription('Completes Purdue email verification process.')
@@ -43,94 +43,53 @@ module.exports = {
     ],
 
     async execute(interaction: CommandInteraction) {
+        let response;
         let subcommand = interaction.options.getSubcommand();
-        let guildMember = interaction.member as GuildMember;
-        let student = await Student.get(guildMember.id);
+        let student = await Student.get(interaction.user.id);
 
-        if (subcommand == "start") {
-            let emailAddress = interaction.options.getString('email');
-            let emailInUse = (await collections.students.findOne({_email: emailAddress})) != null;
-            if (student) {
-                if (student.status) {
-                    await interaction.reply({content: "You have already been verified.", ephemeral: true});
-                    let purdueRole = await guildMember.guild.roles.fetch(config.roles.purdue);
-                    await guildMember.roles.add(purdueRole);
-                } else {
-                    await interaction.reply({content: "Please finish verification with /verify complete and the code I emailed you.", ephemeral: true});
+        switch (subcommand) {
+            case "start":
+                let email = interaction.options.getString('email');
+                if (student) {
+                    if (student.status) {
+                        response = {content: "You have already been verified.", ephemeral: true};
+                        await (interaction.member as GuildMember).roles.add(config.roles.purdue);
+                    } else response = {content: "Please finish verification with \`/verify complete\`.", ephemeral: true};
+                } else if (await collections.students.findOne({_email: email})) {
+                    response = {content: "This email is already in use.", ephemeral: true}
+                } else if (isValidEmail(email)) {
+                    let code = Math.floor(100000 + Math.random() * 900000);
+                    let username = interaction.user.username;
+                    await sendEmail(email, code);
+                    await bot.logger.info(`New Student Registered - Username: ${username}`)
+                    await Student.post(new Student(interaction.user.id, username, email, code, false));
+                    response = {content: `An email containing your one-time code was sent to \`${email}\`.`, ephemeral: true};
                 }
-            } else if (emailInUse) await interaction.reply({content: "This email is already in use.", ephemeral: true});
-            else if (isValidEmail(emailAddress)) await finishAuthentication(interaction, guildMember, emailAddress);
-            else {
-                await interaction.reply({
-                    content: `The email you provided, ${emailAddress}, was invalid. Please use a valid Purdue email or Alumni email.`,
-                    ephemeral: true
-                })
-            }
-        } else {
-            let clientInput = interaction.options.getInteger('code');
-            let student = await Student.get(guildMember.id);
-
-            if (student) {
-                let code = student.code;
-
-                if (code === 0) return interaction.reply({
-                    content: "You have already been authenticated!",
-                    ephemeral: true
-                });
-                if (code !== clientInput) return interaction.reply({
-                    content: "Sorry, this code is incorrect.",
-                    ephemeral: true
-                });
-
-                await activateProfile(student, guildMember);
-                await interaction.reply({content: "You have successfully been authenticated!", ephemeral: true});
-
-            } else {
-                await interaction.reply({
-                    content: "You need to submit an email for verification first. (/verify)",
-                    ephemeral: true
-                });
-            }
+                break;
+            case "complete":
+                if (student) {
+                    let code = interaction.options.getInteger('code');
+                    if (student.status) {
+                        response = {content: "You have already been authenticated!", ephemeral: true};
+                        await (interaction.member as GuildMember).roles.add(config.roles.purdue);
+                    } else if (code == student.code) {
+                        student.code = 0;
+                        student.status = true;
+                        await student.save();
+                        await (interaction.member as GuildMember).roles.add(config.roles.purdue);
+                        await bot.logger.info(`Student Verified - Username: ${student.username}`);
+                        response = {content: "You have successfully been authenticated!", ephemeral: true};
+                    } else response = {content: "Sorry, this code is incorrect.", ephemeral: true};
+                } else {
+                    response = {content: "You need to submit an email for verification first. Use \`/verify start\`", ephemeral: true};
+                }
+                break;
+            default:
+                response = {content: "Something went very wrong... Please send this to <@!751910711218667562>."};
+                throw new Error("Verify command failed - Inaccessible option");
         }
+        await interaction.reply(response);
     }
-}
-
-/**
- * Finalizes the authentication process once the provided email is validated
- * @param interaction
- * @param guildMember
- * @param emailAddress
- */
-async function finishAuthentication(interaction, guildMember, emailAddress) {
-    let id = guildMember.id;
-    let username = guildMember.user.username;
-    let user = await Student.get(id);
-    let code = generateAuthCode();
-
-    await sendEmail(emailAddress, code);
-    if (user) {
-        user.username = username;
-        user.code = code;
-        user.email = emailAddress;
-        await Student.put(user);
-    } else {
-        await Student.post(new Student(id, username, emailAddress, code, false));
-        await bot.logger.info(`New Student Registered - Username: ${username}`)
-    }
-
-    return interaction.reply({
-        content: `A confirmation email containing your one-time code was sent to \`${emailAddress}\`.`,
-        ephemeral: true
-    });
-}
-
-async function activateProfile(student: Student, guildMember) {
-    let purdueRole = await guildMember.guild.roles.fetch(config.roles.purdue);
-    student.status = true;
-    student.code = 0;
-    await bot.logger.info(`Student Verified - Username: ${student.username}`);
-    await Student.put(student);
-    guildMember.roles.add(purdueRole);
 }
 
 /**
@@ -164,24 +123,10 @@ async function sendEmail(email, code) {
 
 /**
  * Parses the provided email address and confirms that is valid
- * @param emailAddress
+ * @param email the provided email address
  */
-function isValidEmail(emailAddress): boolean {
-    let emailRegExFilter;
-    let filteredAddress = '';
-
-    emailRegExFilter = new RegExp(/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/);
-    emailAddress = emailAddress.toLowerCase().match(emailRegExFilter);
-
-    if (emailAddress) filteredAddress = emailAddress[0];
-
-    return filteredAddress.endsWith('@purdue.edu') || filteredAddress.endsWith('@alumni.purdue.edu') || filteredAddress.endsWith("@student.purdueglobal.edu");
+function isValidEmail(email): boolean {
+    let emailRegEx = new RegExp(/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/m);
+    email = email.toLowerCase().match(emailRegEx)[0];
+    return email.endsWith('@purdue.edu') || email.endsWith('@alumni.purdue.edu') || email.endsWith("@student.purdueglobal.edu");
 }
-
-/**
- * Generates a random 6 digit code
- */
-function generateAuthCode() {
-    return Math.floor(100000 + Math.random() * 900000);
-}
-

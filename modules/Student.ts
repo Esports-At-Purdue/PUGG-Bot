@@ -1,5 +1,6 @@
 import {collections} from "../services/database.service";
 
+
 export default class Student {
     private _id: string;
     private _username: string;
@@ -57,6 +58,10 @@ export default class Student {
 
     set status(value: boolean) {
         this._status = value;
+    }
+
+    async save() {
+        await Student.put(this);
     }
 
     static async get(id: string) {

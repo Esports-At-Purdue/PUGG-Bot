@@ -13,6 +13,7 @@ import * as config from './config.json';
 import {synchronize} from './modules/Database';
 import {tryToCloseEsportsTicket, tryToOpenEsportsTicket} from "./modules/Ticket";
 import Bot from "./modules/Bot";
+import {logger} from "sequelize/types/lib/utils/logger";
 
 export const bot = new Bot();
 
@@ -50,15 +51,13 @@ bot.on('guildMemberRemove', async guildMember => {
  * @param interaction
  */
 async function receiveCommand(interaction: CommandInteraction) {
-    const command = bot.commands.get(interaction.commandName);
-
-    if (!command) return;
-
     try {
+        const command = bot.commands.get(interaction.commandName);
         await command.execute(interaction);
         await bot.logger.info(`${interaction.commandName} command issued by ${interaction.user.username}`);
     } catch (error) {
         await bot.logger.error(`${interaction.commandName} command issued by ${interaction.user.username} failed`, error);
+        await interaction.reply({content: "There was an error running this command.", ephemeral: true});
     }
 }
 

@@ -112,12 +112,9 @@ async function sendEmail(email, code) {
         text: `Use this one-time code to verify your account!\nCode: ${code}\nUse the command \'/verify complete\' in any channel.`
     };
 
-    await transporter.sendMail(mailOptions, function (error, info) {
-        if (error) {
-            console.log(error);
-        } else {
-            console.log('Email sent: ' + info.response);
-        }
+    await transporter.sendMail(mailOptions, async function (error, info) {
+        if (error) await bot.logger.error(`An error occurred sending an email to ${email}`, error);
+        else await bot.logger.info('Email sent: ' + info.response);
     });
 }
 

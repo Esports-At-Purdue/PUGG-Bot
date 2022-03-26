@@ -3,8 +3,7 @@ import {
     MessageActionRow,
     MessageButton,
     MessageEmbed,
-    MessageSelectMenu,
-    Permissions
+    MessageSelectMenu
 } from 'discord.js'
 import { SlashCommandBuilder } from '@discordjs/builders'
 import * as config from '../config.json';
@@ -16,22 +15,18 @@ module.exports = {
         .setDescription('Creates a various-purpose menu.')
         .setDefaultPermission(false)
         .addStringOption(option => option
-                .setName('menu_name')
-                .setDescription('The name of the menu to setup')
-                .setRequired(true)
-                .addChoice('verification', 'verification_menu')
-                .addChoice('esports', 'esports_menu')
-                .addChoice('games', 'games_menu')
-                .addChoice('platforms', 'platform_menu')
-                .addChoice('genres', 'genre_menu')
+            .setName('menu_name')
+            .setDescription('The name of the menu to setup')
+            .setRequired(true)
+            .addChoice('verification', 'verification_menu')
+            .addChoice('esports', 'esports_menu')
+            .addChoice('games', 'games_menu')
+            .addChoice('platforms', 'platform_menu')
+            .addChoice('genres', 'genre_menu')
+            .addChoice('welcome', 'welcome_menu')
         ),
 
     permissions: [
-        {
-            id: config.roles.president,
-            type: 'ROLE',
-            permission: true
-        },
         {
             id: config.roles.pugg_officer,
             type: 'ROLE',
@@ -51,37 +46,33 @@ module.exports = {
 
     async execute(interaction: CommandInteraction) {
         let menu_name = interaction.options.getString('menu_name');
-        let guild = interaction.guild;
-        let user = interaction.user;
-        guild.members.fetch(user).then(guildMember => {
-            let hasManageMessages = guildMember.permissions.has(Permissions.FLAGS.MANAGE_MESSAGES);
-            if (hasManageMessages) {
-                switch(menu_name) {
-                    case 'verification_menu':
-                        return buildVerificationMenu(interaction);
-                    case 'esports_menu':
-                        return buildEsportsMenu(interaction);
-                    case 'games_menu':
-                        return buildGamesMenu(interaction);
-                    case 'platform_menu':
-                        return buildPlatformsMenu(interaction);
-                    case 'genre_menu':
-                        return buildGenresMenu(interaction);
-                    default:
-                        interaction.reply({content: 'Sorry, the specified menu does not exist', ephemeral: true});
-                }
-            } else {
-                interaction.reply({content: 'Sorry, you do not have permission to do this!', ephemeral: true});
-            }
-        })
+        switch(menu_name) {
+            case 'verification_menu': await buildVerificationMenu(interaction);
+                break;
+            case 'esports_menu': await buildEsportsMenu(interaction);
+                break;
+            case 'games_menu': await buildGamesMenu(interaction);
+                break;
+            case 'platform_menu': await buildPlatformsMenu(interaction);
+                break;
+            case 'genre_menu': await buildGenresMenu(interaction);
+                break;
+            case 'welcome_menu': await buildWelcomeMenu(interaction);
+                break;
+            default: await interaction.reply({content: 'Sorry, the specified menu does not exist', ephemeral: true});
+        }
+        await interaction.reply({content: "If you are seeing this you did it right.", ephemeral: true});
     }
 }
 
-function buildVerificationMenu(interaction) {
+async function buildVerificationMenu(interaction) {
     let embed = new MessageEmbed()
-        .setTitle("Server Roles Menu")
+        .setTitle("Purdue Affiliation Menu")
         .setColor("#f1c40f")
-        .setDescription("Indicate your affiliation with Purdue. The Purdue role requires email verification. You must apply either the Purdue role or Non-Purdue role in order to access public channels.");
+        .setDescription("Indicate your affiliation with Purdue. The Purdue role requires email verification.\n\n" +
+            "**How to authenticate yourself as a Purdue Student!**\n" +
+            "1. `Use /verify start to have a one-time code sent to your email!`\n" +
+            "2. `Use /verify complete with your one-time code.`\n");
 
     let row = new MessageActionRow()
         .addComponents(
@@ -94,10 +85,10 @@ function buildVerificationMenu(interaction) {
                 .setLabel('Non-Purdue')
                 .setStyle('SECONDARY'),
         );
-    interaction.reply({ embeds: [embed] , components: [row] });
+    await interaction.channel.send({embeds: [embed], components: [row]});
 }
 
-function buildEsportsMenu(interaction) {
+async function buildEsportsMenu(interaction) {
     let embed = new MessageEmbed()
         .setTitle("Purdue Esports Roles Menu")
         .setColor("#f1c40f")
@@ -119,7 +110,7 @@ function buildEsportsMenu(interaction) {
                 .setStyle('PRIMARY')
         );
 
-    interaction.reply({ embeds: [embed] , components: [row] });
+    await interaction.channel.send({embeds: [embed], components: [row]});
 }
 
 async function buildGamesMenu(interaction) {
@@ -132,7 +123,7 @@ async function buildGamesMenu(interaction) {
         .setColor("#f1c40f")
         .setDescription("Select any game to apply the role to yourself!");
 
-    interaction.reply({ embeds: [embed], components: rows });
+    await interaction.channel.send({ embeds: [embed], components: rows });
 }
 
 async function buildPlatformsMenu(interaction) {
@@ -155,7 +146,7 @@ async function buildPlatformsMenu(interaction) {
         )
     }
 
-    interaction.reply({embeds: [embed], components: [row]});
+    await interaction.channel.send({embeds: [embed], components: [row]});
 }
 
 async function buildGenresMenu(interaction) {
@@ -178,7 +169,34 @@ async function buildGenresMenu(interaction) {
         )
     }
 
-    interaction.reply({ embeds: [embed] , components: [row] });
+    await interaction.channel.send({ embeds: [embed] , components: [row] });
+}
+
+async function buildWelcomeMenu(interaction) {
+    let row
+    let embed;
+
+    embed = new MessageEmbed()
+        .setTitle("Welcome to PUGG!")
+        .setColor("#f1c40f")
+        .setDescription(
+            "Thanks for joining the Purdue University Gamers Group discord server!\n" +
+            "\n" +
+            "To view the full server, click the button below to get the <@&224771028679655426> role. You will only see announcements until you do this.\n" +
+            "\n" +
+            "Esports roles as well as individual game roles can be found in <#887080782668136478>. To gain access to the verified Purdue-only channels, head over to <#887084374217072670>.\n" +
+            "\n" +
+            "Thanks again for checking us out, and if you have any questions, just find the relevant text channel! "
+        );
+
+    row = new MessageActionRow()
+        .addComponents(
+            new MessageButton()
+                .setCustomId(config.roles.pugger)
+                .setLabel('Become A PUGGer')
+                .setStyle('PRIMARY')
+        )
+    await interaction.channel.send({embeds: [embed], components: [row]});
 }
 
 async function buildGamesRows() {

@@ -1,10 +1,13 @@
-export default class Ticket {
+import {TicketType} from "./TicketType";
+
+export default class Ticket{
     private _id: string;
     private _owner: string;
     private _status: boolean;
     private _content: string;
+    private _type: TicketType;
 
-    constructor(id: string, owner: string, status: boolean, content: string = "") {
+    constructor(id: string, owner: string, status: boolean, content: string = "", type: TicketType) {
         this._id = id;
         this._owner = owner;
         this._status = status;
@@ -12,7 +15,7 @@ export default class Ticket {
     }
 
     static fromObject(object) {
-        return new Ticket(object._id, object._owner, object._status, object._content);
+        return new Ticket(object._id, object._owner, object._status, object._content, object._type);
     }
 
     get id(): string {

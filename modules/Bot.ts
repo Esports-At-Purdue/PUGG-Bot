@@ -4,8 +4,7 @@ import {
     ClientOptions,
     Collection,
     Guild,
-    Intents, MessageActionRow, MessageButton,
-    MessageEmbed,
+    Intents,
     TextChannel
 } from "discord.js";
 import {connectToDatabase} from "../services/database.service";

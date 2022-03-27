@@ -2,7 +2,7 @@ import * as express from "express";
 import { Request, Response } from "express";
 import { ObjectId } from "mongodb";
 import { collections } from "./database.service";
-import newTicket from "../Ticket";
+import newTicket from "../modules/Ticket";
 
 export const ticketsRouter = express.Router();
 

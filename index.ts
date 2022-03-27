@@ -10,10 +10,9 @@ import {
     TextChannel
 } from 'discord.js';
 import * as config from './config.json';
-import {synchronize} from './modules/Database';
-import {tryToCloseEsportsTicket, tryToOpenEsportsTicket} from "./modules/Ticket";
 import Bot from "./modules/Bot";
-import {logger} from "sequelize/types/lib/utils/logger";
+import Ticket from "./modules/Ticket";
+import Student from "./modules/Student";
 
 export const bot = new Bot();
 
@@ -23,7 +22,6 @@ bot.login(config.token).then(async () => {
 
 bot.on('ready', async () => {
     await setRichPresence(bot);
-    await synchronize();
     global.setInterval(async () => {
         bot.guild = await bot.guilds.fetch(config.guild);
     }, 600000)
@@ -69,7 +67,7 @@ async function receiveButton(button: ButtonInteraction) {
     let id = button.customId;
 
     try {
-        if (id === 'close_ticket') await tryToCloseEsportsTicket(button);
+        if (id === 'close_ticket') await Ticket.close(button.channelId);
         else {
             let role = await button.guild.roles.fetch(id);
             let guildMember = button.member as GuildMember;
@@ -119,10 +117,14 @@ async function requestRole(role: Role, guildMember: GuildMember, interaction: Bu
         case 'Coach':
         case 'Captain':
         case 'Player':
+
             if (hasRole) return ("You already have this role.");
-            if (hasPurdueRole) await tryToOpenEsportsTicket(guildMember, role, interaction);
+            if (hasPurdueRole) {
+                let student = await Student.get(guildMember.id);
+                let ticket = await Ticket.open(student, role.name);
+                return `A ticket has been opened in <#${ticket.id}>`;
+            }
             else return ("Pleaser verify yourself with **/verify** first.");
-            break;
 
         case 'Purdue':
             if (hasRole) return "You already have this role.";

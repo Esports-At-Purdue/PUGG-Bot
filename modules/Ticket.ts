@@ -1,213 +1,162 @@
-import {DataTypes, Model} from "sequelize";
-import {sequelize} from "./Database";
+import Student from "./Student";
+import {CategoryChannel, MessageActionRow, MessageButton, MessageEmbed, TextChannel} from "discord.js";
 import * as config from "../config.json";
-import {channelMention, userMention} from "@discordjs/builders";
-import {
-    ButtonInteraction, CategoryChannel,
-    GuildMember, MessageActionRow,
-    MessageButton, MessageEmbed,
-    Role, Snowflake, TextChannel
-} from "discord.js";
 import {bot} from "../index";
+import {collections} from "../services/database.service";
 
-/**
- * Ticket Class
- */
-class Ticket extends Model {
-    status: boolean;
-    channelId: string;
-    ownerId: string;
-}
+export default class Ticket{
+    private _id: string;
+    private _role: string;
+    private _owner: string;
+    private _status: boolean;
+    private _content: string;
 
-/**
- * Ticket DB Init
- */
-Ticket.init({
-    ownerId: {
-        type: DataTypes.STRING,
-        allowNull: false
-    },
-    channelId: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        primaryKey: true
-    },
-    status: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true
-    },
-    content: {
-        type: DataTypes.STRING
+    constructor(id: string, role: string, owner: string, status: boolean, content: string) {
+        this._id = id;
+        this._role = role;
+        this._owner = owner;
+        this._status = status;
+        this._content = content;
     }
-}, {
-    sequelize, // Connection Instance
-    modelName: 'Ticket' // Model Name
-});
 
-/**
- * Attempts to open an Esports Role Ticket
- * @param guildMember
- * @param role
- * @param interaction
- */
-async function tryToOpenEsportsTicket(guildMember: GuildMember, role: Role, interaction: ButtonInteraction) {
-    let currentOpenTickets;
-    let ticketChannel;
-    let embed;
-    let actionRow;
-    let ticket;
+    static fromObject(object): Ticket {
+        return new Ticket(object._id, object._role, object._owner, object._status, object._content);
+    }
 
-    currentOpenTickets = await getOpenTickets(guildMember);
+    static async open(student: Student, role: string) {
+        let ticket = new Ticket(null, role, student.id, true, null);
+        await ticket.createChannel();
+        await Ticket.post(ticket);
+        await ticket.log();
+        return ticket;
+    }
 
-    if (currentOpenTickets.length > 0) {
-        await interaction.reply({
-            content: "Request Failed: You already have an esports ticket open.",
-            ephemeral: true
+    static async close(id: string) {
+        let ticket = await Ticket.get(id);
+        let messages = [];
+        let channel = await bot.guild.channels.fetch(ticket.id) as TextChannel;
+        let messageCollection = await channel.messages.fetch({limit: 100});
+        messageCollection.forEach(message => {
+            let username = message.author.username;
+            messages.push(`${username}: ${message.content}`);
         });
-    } else {
-        ticketChannel = await createTicketChannel(guildMember, role);
-        embed = await createTicketEmbed();
-        actionRow = await createTicketActionRow();
-        ticket = await createTicket(guildMember.id, ticketChannel.id);
-
-        await ticketChannel.send({ embeds: [embed] , components: [actionRow] });
-        await logTicket(ticket, guildMember);
-        await interaction.reply({
-            content: `A ticket has been opened for you. Please follow instructions in ${channelMention(ticket.channelId)}`,
-            ephemeral: true
-        })
+        ticket.content = messages.reverse().join('\n');
+        ticket.status = false;
+        await ticket.log();
+        await channel.delete();
+        await ticket.save();
     }
-}
 
-/**
- * Closes an Esports ticket via an interaction in the Ticket Channel
- * @param interaction
- */
-async function tryToCloseEsportsTicket(interaction: ButtonInteraction) {
-    let ticketChannel;
-    let channelMessages;
-    let guildMember;
-    let guild;
-    let ticket;
+    async createChannel() {
+        let guildMember = await bot.guild.members.fetch(this.owner);
+        let ticketCategory = await bot.guild.channels.fetch(config.support_category) as CategoryChannel;
 
-    guild = interaction.guild;
-    guildMember = interaction.member;
-    ticketChannel = interaction.channel;
-    ticket = await Ticket.findByPk(ticketChannel.id);
-    ticketChannel = await guild.channels.fetch(ticketChannel.id);
-    channelMessages = await collectChannelMessages(ticketChannel);
+        let channel = await ticketCategory.createChannel(`${guildMember.user.username}`, {
+            type: "GUILD_TEXT",
+            permissionOverwrites: [
+                {
+                    id: bot.guild.id,
+                    deny: ["VIEW_CHANNEL"]
+                },
+                {
+                    id: this.owner,
+                    allow: ["VIEW_CHANNEL", "SEND_MESSAGES", "READ_MESSAGE_HISTORY", "USE_APPLICATION_COMMANDS"]
+                }]
+        });
 
-    ticket.status = false;
-    ticket.content = channelMessages;
-    await logTicket(ticket, guildMember);
-    await bot.logger.info(`Ticket closed by ${guildMember.nickname}`)
-    await ticket.save();
-    await ticketChannel.delete();
-}
+        let embed = new MessageEmbed()
+            .setTitle(`Role Request Ticket`)
+            .setDescription(`Please list your game and position and an Officer will review your request.\n`);
+        let row = new MessageActionRow()
+            .addComponents(new MessageButton().setCustomId(`close_ticket`).setLabel('Close Ticket').setStyle('DANGER'));
 
-/**
- * Creates a channel for a new Ticket
- * @param guildMember
- * @param role
- */
-async function createTicketChannel(guildMember: GuildMember, role: Role) {
-    let guild = guildMember.guild;
-    let ticketCategory = await guild.channels.fetch(config.support_category) as CategoryChannel;
-
-    return await ticketCategory.createChannel(`${guildMember.user.username}-${role.name}`, {
-        type: "GUILD_TEXT",
-        permissionOverwrites: [
-            {
-                id: guild.id,
-                deny: ["VIEW_CHANNEL"]
-            },
-            {
-                id: guildMember.id,
-                allow: ["VIEW_CHANNEL", "SEND_MESSAGES", "READ_MESSAGE_HISTORY", "USE_APPLICATION_COMMANDS"]
-            }]
-    });
-}
-
-/**
- * Creates and returns a new Ticket object
- * @param ownerId
- * @param channelId
- */
-async function createTicket(ownerId: Snowflake, channelId: Snowflake) {
-    const member = await bot.guild.members.fetch(ownerId);
-    await bot.logger.info(`New Ticket Created by ${member.nickname}`)
-    return Ticket.create({ownerId: ownerId, channelId: channelId});
-}
-
-/**
- * Collects and returns all open Tickets for a particular guildMember
- * @param guildMember
- */
-async function getOpenTickets(guildMember: GuildMember) {
-    return await Ticket.findAll({ where: { ownerId: guildMember.id, status: true}});
-}
-
-/**
- * Logs ticket openings and closings in the designated Ticket Log Channel
- * @param ticket
- * @param guildMember
- */
-async function logTicket(ticket: Ticket, guildMember: GuildMember) {
-    let status = ticket.status;
-    let channelId = ticket.channelId;
-    let logChannel = await guildMember.guild.channels.fetch(config.channels.ticket_log_channel) as TextChannel;
-    let embed = new MessageEmbed();
-
-    if (status) {
-        embed.setTitle(`Esports Role Ticket Opened`)
-            .setDescription(`${userMention(ticket.ownerId)} has opened a new ticket in ${channelMention(channelId)}`)
-            .setColor("GREEN");
-    } else {
-        embed.setTitle(`Esports Role Ticket Closed`)
-            .setDescription(`${userMention(ticket.ownerId)}'s ticket has been closed by ${userMention(guildMember.id)}`)
-            .setColor("RED");
+        this.id = channel.id;
+        await channel.send({embeds: [embed], components: [row]});
     }
-    await logChannel.send({embeds: [embed]})
-}
 
-/**
- * Collects the last 100 messages in a channel and pushes them to an array, and returns them as a string;
- * @param channel
- */
-async function collectChannelMessages(channel: TextChannel) {
-    let messageCollection = await channel.messages.fetch({limit: 100});
-    let messages = [];
-    messageCollection.forEach(message => {
-        let username = message.author.username;
-        messages.push(`${username}: ${message.content}`);
-    });
-    return messages.reverse().join('\n');
-}
+    async log() {
+        let embed = new MessageEmbed();
+        let guildMember = await bot.guild.members.fetch(this.owner);
+        let logChannel = await bot.guild.channels.fetch(config.channels.ticket_log_channel) as TextChannel;
+        if (this.status) embed.setTitle(`${guildMember.nickname} has opened a new ticket.`).setColor("DARK_GREEN");
+        else embed.setTitle(`${guildMember.nickname}'s ticket has been closed.`).setColor("DARK_ORANGE");
+        await logChannel.send({embeds: [embed]})
+    }
 
-/**
- * Creates the MessageEmbed for an Esports Ticket
- */
-async function createTicketEmbed() {
-    return new MessageEmbed()
-        .setTitle(`Role Request Ticket`)
-        .setDescription(`Please list your game and position and an Officer will review your request.\n`);
-}
+    get id(): string {
+        return this._id;
+    }
 
-/**
- * Creates the ActionRow for an EsportsTicket
- */
-async function createTicketActionRow() {
-    return new MessageActionRow()
-        .addComponents(
-            new MessageButton()
-                .setCustomId(`close_ticket`)
-                .setLabel('Close Ticket')
-                .setStyle('DANGER')
-        );
-}
+    set id(value: string) {
+        this._id = value;
+    }
 
-export {
-    Ticket,
-    tryToOpenEsportsTicket,
-    tryToCloseEsportsTicket
+    get owner(): string {
+        return this._owner;
+    }
+
+    set owner(value: string) {
+        this._owner = value;
+    }
+
+    get role(): string {
+        return this._role;
+    }
+
+    set role(value: string) {
+        this._role = value;
+    }
+
+    get status(): boolean {
+        return this._status;
+    }
+
+    set status(value: boolean) {
+        this._status = value;
+    }
+
+    get content(): string {
+        return this._content;
+    }
+
+    set content(value: string) {
+        this._content = value;
+    }
+
+    async save() {
+        await Ticket.put(this);
+    }
+
+    static async get(id: string) {
+        try {
+            const query = { _id: id };
+            const ticket = Ticket.fromObject(await collections.tickets.findOne(query));
+
+            if (ticket) {
+                return ticket;
+            }
+        } catch (error) {
+            return undefined;
+        }
+    }
+
+    static async post(ticket: Ticket) {
+        try {
+            const Ticket = (ticket);
+            // @ts-ignore
+            return await collections.tickets.insertOne(Ticket);
+
+        } catch (error) {
+            console.error(error);
+            return undefined;
+        }
+    }
+
+    static async put(ticket: Ticket) {
+        await collections.tickets.updateOne({ _id: (ticket.id) }, { $set: ticket });
+    }
+
+    static async delete(ticket: Ticket) {
+        await collections.tickets.deleteOne({ _id: (ticket.id) });
+    }
 }

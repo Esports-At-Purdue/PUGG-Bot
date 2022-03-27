@@ -1,6 +1,5 @@
 import {collections} from "../services/database.service";
 
-
 export default class Student {
     private _id: string;
     private _username: string;
@@ -16,7 +15,7 @@ export default class Student {
         this._status = status;
     }
 
-    static fromObject(object) {
+    static fromObject(object): Student {
         return new Student(object._id, object._username, object._email, object._code, object._status);
     }
 

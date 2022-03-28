@@ -16,6 +16,7 @@ import * as fs from "fs";
 import Logger from "./Logger";
 import {studentsRouter} from "../services/students.router";
 import {ticketsRouter} from "../services/tickets.router";
+import {postTwitch} from "../services/twitch.service";
 
 const options = {
     intents: [
@@ -73,20 +74,28 @@ export default class Bot extends Client{
         this._guild = await this.guilds.fetch(config.guild);
         this._logChannel = await this._guild.channels.fetch(config.channels.log_channel) as TextChannel;
         this._logger = new Logger(this._logChannel);
-        await this.initializeExpress(28018);
+        await this.initializeExpress(28018, 8080);
         await this.initializeCommands(config.token);
     }
 
-    async initializeExpress(address: number) {
+    async initializeExpress(address: number, port: number) {
         await connectToDatabase().then(() => {
-            express().use("/students", studentsRouter);
-            express().use("/tickets", ticketsRouter);
-            express().listen(address, () => {
-                this.logger.info(`Server started at http://localhost:${address}`)
+            const mongoApp = express();
+            mongoApp.use("/students", studentsRouter);
+            mongoApp.use("/tickets", ticketsRouter);
+            mongoApp.listen(address, () => {
+                this.logger.info(`Listening for DB Queries at http://localhost:${address}`)
             })
         }).catch((error: Error) => {
             this.logger.fatal("Database connection failure", error);
             process.exit(0);
+        })
+
+        const twitchApp = express();
+        twitchApp.use(express.raw({ type: 'application/json'}));
+        twitchApp.listen(port, () => {this.logger.info(`Listening for Twitch Callbacks at http://localhost:${port}`)})
+        twitchApp.post('/eventsub', async (req, res) => {
+            await postTwitch(req, res);
         })
     }
 

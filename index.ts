@@ -3,7 +3,7 @@ import {
     ButtonInteraction,
     Client,
     CommandInteraction,
-    GuildMember,
+    GuildMember, MessageEmbed,
     Role,
     SelectMenuInteraction,
     Snowflake,
@@ -32,6 +32,25 @@ bot.on('interactionCreate', async interaction => {
         if (interaction.isButton()) await receiveButton(interaction);
         if (interaction.isSelectMenu()) await receiveSelectMenu(interaction);
         if (interaction.isCommand()) await receiveCommand(interaction);
+});
+
+bot.on('messageCreate', async message => {
+    if (message.channelId == config.channels.verify) {
+        if (message.author.id != bot.user.id) {
+            let embed = new MessageEmbed()
+                .setDescription("Only slash commands are permitted in this channel.\n" +
+                    "Please refer to [Discord - Slash Commands FAQ](https://support.discord.com/hc/en-us/articles/1500000368501-Slash-Commands-FAQ)" +
+                    " if further instruction is needed."
+                )
+            let response = await message.reply({embeds: [embed]});
+            setTimeout(async () => {
+                try {
+                    await response.delete();
+                    await message.delete();
+                } catch (e) {}
+            }, 5000);
+        }
+    }
 });
 
 bot.on('guildMemberAdd', async guildMember => {

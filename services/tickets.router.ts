@@ -2,7 +2,7 @@ import * as express from "express";
 import { Request, Response } from "express";
 import { ObjectId } from "mongodb";
 import { collections } from "./database.service";
-import newTicket from "../modules/Ticket";
+import Ticket from "../modules/Ticket";
 
 export const ticketsRouter = express.Router();
 
@@ -10,7 +10,7 @@ ticketsRouter.use(express.json());
 
 ticketsRouter.get("/", async (_req: Request, res: Response) => {
     try {
-        const tickets = (await collections.tickets.find({}).toArray()) as newTicket[];
+        const tickets = (await collections.tickets.find({}).toArray()) as Object[];
 
         res.status(200).send(tickets);
     } catch (error) {
@@ -24,7 +24,7 @@ ticketsRouter.get("/:id", async (req: Request, res: Response) => {
     try {
 
         const query = { _id: new ObjectId(id) };
-        const ticket = (await collections.tickets.findOne(query)) as newTicket;
+        const ticket = Ticket.fromObject(await collections.tickets.findOne(query)) as Ticket;
 
         if (ticket) {
             res.status(200).send(ticket);
@@ -36,9 +36,9 @@ ticketsRouter.get("/:id", async (req: Request, res: Response) => {
 
 ticketsRouter.post("/", async (req: Request, res: Response) => {
     try {
-        const newTicket = req.body as newTicket;
+        const Ticket = req.body as Ticket;
         // @ts-ignore
-        const result = await collections.tickets.insertOne(newTicket);
+        const result = await collections.tickets.insertOne(Ticket);
 
         result
             ? res.status(201).send(`Successfully created a new ticket with id ${result.insertedId}`)
@@ -53,7 +53,7 @@ ticketsRouter.put("/:id", async (req: Request, res: Response) => {
     const id = req?.params?.id;
 
     try {
-        const updatedTicket: newTicket = req.body as newTicket;
+        const updatedTicket: Ticket = req.body as Ticket;
         const query = { _id: new ObjectId(id) };
 
         const result = await collections.tickets.updateOne(query, { $set: updatedTicket });

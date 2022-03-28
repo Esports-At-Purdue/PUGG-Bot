@@ -78,8 +78,8 @@ export default class Ticket{
         let embed = new MessageEmbed();
         let guildMember = await bot.guild.members.fetch(this.owner);
         let logChannel = await bot.guild.channels.fetch(config.channels.ticket_log_channel) as TextChannel;
-        if (this.status) embed.setTitle(`${guildMember.nickname} has opened a new ticket.`).setColor("DARK_GREEN");
-        else embed.setTitle(`${guildMember.nickname}'s ticket has been closed.`).setColor("DARK_ORANGE");
+        if (this.status) embed.setTitle(`${guildMember.user.username} has opened a new ticket.`).setColor("DARK_GREEN");
+        else embed.setTitle(`${guildMember.user.username}'s ticket has been closed.`).setColor("DARK_ORANGE");
         await logChannel.send({embeds: [embed]})
     }
 

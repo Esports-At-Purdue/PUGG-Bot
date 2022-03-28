@@ -61,7 +61,7 @@ module.exports = {
                 break;
             default: await interaction.reply({content: 'Sorry, the specified menu does not exist', ephemeral: true});
         }
-        await interaction.reply({content: "If you are seeing this you did it right.", ephemeral: true});
+        await interaction.reply({content: "Your menu has been generated!", ephemeral: true});
     }
 }
 
@@ -71,8 +71,8 @@ async function buildVerificationMenu(interaction) {
         .setColor("#f1c40f")
         .setDescription("Indicate your affiliation with Purdue. The Purdue role requires email verification.\n\n" +
             "**How to authenticate yourself as a Purdue Student!**\n" +
-            "1. `Use /verify start to have a one-time code sent to your email!`\n" +
-            "2. `Use /verify complete with your one-time code.`\n");
+            "1. Use `/verify start` to have a one-time code sent to your email.\n" +
+            "2. Use `/verify complete` with your one-time code.\n");
 
     let row = new MessageActionRow()
         .addComponents(
@@ -224,7 +224,6 @@ async function buildGamesRows() {
         actionRow.addComponents(selectMenu);
         rows.push(actionRow);
     }
-
     return rows;
 }
 

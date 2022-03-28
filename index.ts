@@ -3,7 +3,7 @@ import {
     ButtonInteraction,
     Client,
     CommandInteraction,
-    GuildMember, MessageEmbed,
+    GuildMember, Interaction, InteractionReplyOptions, MessageEmbed, MessagePayload,
     Role,
     SelectMenuInteraction,
     Snowflake,
@@ -21,7 +21,7 @@ bot.login(config.token).then(async () => {
 });
 
 bot.on('ready', async () => {
-    await setRichPresence(bot);
+    await setPresence(bot);
     global.setInterval(async () => {
         bot.guild = await bot.guilds.fetch(config.guild);
     }, 600000)
@@ -80,22 +80,20 @@ async function receiveCommand(interaction: CommandInteraction) {
 
 /**
  * Executes logic on a Button Interaction
- * @param button
+ * @param interaction
  */
-async function receiveButton(button: ButtonInteraction) {
-    let id = button.customId;
-
+async function receiveButton(interaction: ButtonInteraction) {
+    let id = interaction.customId;
     try {
-        if (id === 'close_ticket') await Ticket.close(button.channelId);
+        if (id === 'close_ticket') await Ticket.close(interaction.channelId);
         else {
-            let role = await button.guild.roles.fetch(id);
-            let guildMember = button.member as GuildMember;
-            let response = await requestRole(role, guildMember, button);
-            response ? await button.reply({content: response, ephemeral: true}) : 0;
+            let role = await interaction.guild.roles.fetch(id);
+            let guildMember = interaction.member as GuildMember;
+            await interaction.reply(await enhancedRoleRequest(role, guildMember, interaction));
         }
-        await bot.logger.info(`${button.component.label} button used by ${button.user.username}`);
+        await bot.logger.info(`${interaction.component.label} button used by ${interaction.user.username}`);
     } catch (error) {
-        await bot.logger.error(`${button.component.label} button used by ${button.user.username} failed`, error);
+        await bot.logger.error(`${interaction.component.label} button used by ${interaction.user.username} failed`, error);
     }
 }
 
@@ -104,18 +102,10 @@ async function receiveButton(button: ButtonInteraction) {
  * @param interaction
  */
 async function receiveSelectMenu(interaction: SelectMenuInteraction) {
-    let roleId = interaction.values[0] as Snowflake;
+    let role = await bot.guild.roles.fetch(interaction.values[0]);
     let guildMember = interaction.member as GuildMember;
-    let hasRole = await checkIfMemberHasRole(roleId, guildMember);
-
     try {
-        if (!hasRole) {
-            await addRoleToMember(roleId, guildMember);
-            await interaction.reply({content: `You successfully applied the role **${roleMention(roleId)}** to yourself.`, ephemeral: true});
-        } else {
-            await removeRoleFromMember(roleId, guildMember);
-            await interaction.reply({content: `You successfully removed the role **${roleMention(roleId)}** from yourself.`, ephemeral: true});
-        }
+        await interaction.reply(await enhancedRoleRequest(role, guildMember, interaction));
         await bot.logger.info(`Select Menu option ${interaction.component.options[0].label} selected by ${interaction.user.username}`);
     } catch (error) {
         await bot.logger.error(`Select Menu option ${interaction.component.options[0].label} selected by ${interaction.user.username} failed`, error);
@@ -128,59 +118,63 @@ async function receiveSelectMenu(interaction: SelectMenuInteraction) {
  * @param guildMember
  * @param interaction
  */
-async function requestRole(role: Role, guildMember: GuildMember, interaction: ButtonInteraction) {
-    let hasRole = await checkIfMemberHasRole(role.id, guildMember);
-    let hasPurdueRole = await checkIfMemberHasRole(config.roles.purdue, guildMember);
+async function enhancedRoleRequest(role: Role, guildMember: GuildMember, interaction: ButtonInteraction | SelectMenuInteraction): Promise<InteractionReplyOptions> {
+    let response;
+    let memberHasRole = await hasRole(role.id, guildMember);
+    let student = await Student.get(guildMember.id);
 
     switch (role.name) {
-        case 'Coach':
-        case 'Captain':
-        case 'Player':
-
-            if (hasRole) return ("You already have this role.");
-            if (hasPurdueRole) {
-                let student = await Student.get(guildMember.id);
+        case "Coach": case "Captain": case "Player":
+            if (memberHasRole) response = {content: "You already have this role.", ephemeral: true}
+            else if (student) {
                 let ticket = await Ticket.open(student, role.name);
-                return `A ticket has been opened in <#${ticket.id}>`;
-            }
-            else return ("Pleaser verify yourself with **/verify** first.");
+                response = {content: `A ticket has been opened in <#${ticket.id}>`, ephemeral: true}
+            } else response = {content: `You must verify yourself as a student first. <#${config.channels.verify}>`, ephemeral: true}
+            break;
 
-        case 'Purdue':
-            if (hasRole) return "You already have this role.";
-            else return `Use the command **/verify** in any channel to verify your purdue email and receive the Purdue role.`;
+        case "Purdue":
+            if (student) {
+                response = {content: "You are verified!", ephemeral: true}
+                await addRole(config.roles.purdue, guildMember);
+                await removeRole(config.roles["non-purdue"], guildMember);
+            } else response = {content: "Please follow the instructions above to verify yourself.", ephemeral: true}
+            break;
 
-        case 'Non-Purdue':
-            if (hasRole) {
-                await removeRoleFromMember(role.id, guildMember);
-                return `You successfully removed the role **${roleMention(role.id)}** from yourself.`;
+        case "Non-Purdue":
+            if (memberHasRole) {
+                response = {content: "You have removed the role **Non-Purdue** from yourself.", ephemeral: true}
+                await removeRole(config.roles["non-purdue"], guildMember);
             } else {
-                if (hasPurdueRole) return "You cannot receive this role because you already have the role 'Purdue'.";
-                else {
-                    await addRoleToMember(role.id, guildMember);
-                    return `You successfully applied the role **${roleMention(role.id)}** to yourself.`;
+                if (student) {
+                    response = {content: "Purdue students cannot apply the Non-Purdue role.", ephemeral: true}
+                } else {
+                    response = {content: "You have applied the role **Non-Purdue** to yourself.", ephemeral: true}
+                    await addRole(config.roles["non-purdue"], guildMember);
                 }
             }
+            break;
 
         default:
-            if (!hasRole) {
-                await addRoleToMember(role.id, guildMember);
-                return `You successfully applied the role **${roleMention(role.id)}** to yourself.`;
+            if (memberHasRole) {
+                response = {content: `You have removed the role **${roleMention(role.id)}** from yourself.`, ephemeral: true}
+                await removeRole(role.id, guildMember);
             } else {
-                await removeRoleFromMember(role.id, guildMember);
-                return`You successfully removed the role **${roleMention(role.id)}** from yourself.`;
+                response = {content: `You applied the role **${roleMention(role.id)}** to yourself.`, ephemeral: true}
+                await addRole(role.id, guildMember);
             }
     }
+    return response;
 }
 
 /**
  * Sets game status for Bot Client
- * @param bot
+ * @param client
  */
-async function setRichPresence(bot: Client) {
+async function setPresence(client: Client) {
     let user;
     let activity;
 
-    user = bot.user;
+    user = client.user;
     activity = {
         name: 'GRIT™',
         type: 'PLAYING'
@@ -191,33 +185,33 @@ async function setRichPresence(bot: Client) {
 
 /**
  * Adds a Role to a GuildMember
- * @param snowflake
+ * @param id
  * @param guildMember
  */
-async function addRoleToMember(snowflake: Snowflake, guildMember: GuildMember) {
-    await guildMember.roles.add(snowflake);
+async function addRole(id: string, guildMember: GuildMember) {
+    await guildMember.roles.add(id);
 }
 
 /**
  * Removes a Role from a GuildMember
- * @param snowflake
+ * @param id
  * @param guildMember
  */
-async function removeRoleFromMember(snowflake: Snowflake, guildMember: GuildMember) {
-    await guildMember.roles.remove(snowflake);
+async function removeRole(id: string, guildMember: GuildMember) {
+    await guildMember.roles.remove(id);
 }
 
 /**
  * Determines whether a GuildMember has a certain Role
- * @param snowflake
+ * @param id
  * @param guildMember
  */
-async function checkIfMemberHasRole(snowflake: Snowflake, guildMember: GuildMember) {
+async function hasRole(id: string, guildMember: GuildMember) {
     let result = false;
     let roles = guildMember.roles.cache;
 
     roles.forEach(role => {
-        if (role.id === snowflake) result = true;
+        if (role.id === id) result = true;
     })
     return result;
 }

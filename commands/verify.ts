@@ -52,8 +52,9 @@ module.exports = {
                 let email = interaction.options.getString('email');
                 if (student) {
                     if (student.status) {
-                        response = {content: "You have already been verified.", ephemeral: true};
+                        response = {content: "You are verified.", ephemeral: true};
                         await (interaction.member as GuildMember).roles.add(config.roles.purdue);
+                        await (interaction.member as GuildMember).roles.remove(config.roles["non-purdue"]);
                     } else response = {content: "Please finish verification with \`/verify complete\`.", ephemeral: true};
                 } else if (await collections.students.findOne({_email: email})) {
                     response = {content: "This email is already in use.", ephemeral: true}
@@ -70,8 +71,9 @@ module.exports = {
                 if (student) {
                     let code = interaction.options.getInteger('code');
                     if (student.status) {
-                        response = {content: "You have already been authenticated!", ephemeral: true};
+                        response = {content: "You are verified.", ephemeral: true};
                         await (interaction.member as GuildMember).roles.add(config.roles.purdue);
+                        await (interaction.member as GuildMember).roles.remove(config.roles["non-purdue"]);
                     } else if (code == student.code) {
                         student.code = 0;
                         student.status = true;

@@ -47,25 +47,18 @@ module.exports = {
     async execute(interaction: CommandInteraction) {
         let menu_name = interaction.options.getString('menu_name');
         switch(menu_name) {
-            case 'verification_menu': await buildVerificationMenu(interaction);
-                break;
-            case 'esports_menu': await buildEsportsMenu(interaction);
-                break;
-            case 'games_menu': await buildGamesMenu(interaction);
-                break;
-            case 'platform_menu': await buildPlatformsMenu(interaction);
-                break;
-            case 'genre_menu': await buildGenresMenu(interaction);
-                break;
-            case 'welcome_menu': await buildWelcomeMenu(interaction);
-                break;
-            default: await interaction.reply({content: 'Sorry, the specified menu does not exist', ephemeral: true});
+            case 'verification_menu': return buildVerificationMenu();
+            case 'esports_menu': return buildEsportsMenu();
+            case 'games_menu': return buildGamesMenu();
+            case 'platform_menu': return buildPlatformsMenu();
+            case 'genre_menu': return buildGenresMenu();
+            case 'welcome_menu': return buildWelcomeMenu();
+            default: return ({content: 'Sorry, the specified menu does not exist', ephemeral: true});
         }
-        await interaction.reply({content: "Your menu has been generated!", ephemeral: true});
     }
 }
 
-async function buildVerificationMenu(interaction) {
+async function buildVerificationMenu() {
     let embed = new MessageEmbed()
         .setTitle("Purdue Affiliation Menu")
         .setColor("#f1c40f")
@@ -85,10 +78,10 @@ async function buildVerificationMenu(interaction) {
                 .setLabel('Non-Purdue')
                 .setStyle('SECONDARY'),
         );
-    await interaction.channel.send({embeds: [embed], components: [row]});
+    return ({embeds: [embed], components: [row]});
 }
 
-async function buildEsportsMenu(interaction) {
+async function buildEsportsMenu() {
     let embed = new MessageEmbed()
         .setTitle("Purdue Esports Roles Menu")
         .setColor("#f1c40f")
@@ -110,10 +103,10 @@ async function buildEsportsMenu(interaction) {
                 .setStyle('PRIMARY')
         );
 
-    await interaction.channel.send({embeds: [embed], components: [row]});
+    return ({embeds: [embed], components: [row]});
 }
 
-async function buildGamesMenu(interaction) {
+async function buildGamesMenu() {
     let rows;
     let embed;
 
@@ -123,10 +116,10 @@ async function buildGamesMenu(interaction) {
         .setColor("#f1c40f")
         .setDescription("Select any game to apply the role to yourself!");
 
-    await interaction.channel.send({ embeds: [embed], components: rows });
+    return ({ embeds: [embed], components: rows });
 }
 
-async function buildPlatformsMenu(interaction) {
+async function buildPlatformsMenu() {
     let embed = new MessageEmbed()
         .setTitle("Platform Button Menu")
         .setColor("#f1c40f")
@@ -146,10 +139,10 @@ async function buildPlatformsMenu(interaction) {
         )
     }
 
-    await interaction.channel.send({embeds: [embed], components: [row]});
+    return ({embeds: [embed], components: [row]});
 }
 
-async function buildGenresMenu(interaction) {
+async function buildGenresMenu() {
     let embed = new MessageEmbed()
         .setTitle("Genres Button Menu")
         .setColor("#f1c40f")
@@ -169,10 +162,10 @@ async function buildGenresMenu(interaction) {
         )
     }
 
-    await interaction.channel.send({ embeds: [embed] , components: [row] });
+    return ({ embeds: [embed] , components: [row] });
 }
 
-async function buildWelcomeMenu(interaction) {
+async function buildWelcomeMenu() {
     let row
     let embed;
 
@@ -196,7 +189,7 @@ async function buildWelcomeMenu(interaction) {
                 .setLabel('Become A PUGGer')
                 .setStyle('PRIMARY')
         )
-    await interaction.channel.send({embeds: [embed], components: [row]});
+    return ({embeds: [embed], components: [row]});
 }
 
 async function buildGamesRows() {

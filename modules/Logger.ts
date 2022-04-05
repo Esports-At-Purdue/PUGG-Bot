@@ -44,7 +44,7 @@ export default class Logger {
             case 0: embed.setColor("RED"); break;
             case 1: embed.setColor("ORANGE"); break;
             case 2: embed.setColor("YELLOW"); break;
-            case 3: embed.setColor("GREEN"); break;
+            case 3: embed.setColor("#2f3136"); break;
             case 4: embed.setColor("BLUE"); break;
             case 5: embed.setColor("DARK_BLUE"); break;
         }

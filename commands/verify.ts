@@ -90,7 +90,7 @@ module.exports = {
                 response = {content: "Something went very wrong... Please send this to <@!751910711218667562>."};
                 throw new Error("Verify command failed - Inaccessible option");
         }
-        await interaction.reply(response);
+        return (response);
     }
 }
 
@@ -111,12 +111,14 @@ async function sendEmail(email, code) {
         from: config.email.username,
         to: email,
         subject: 'PUGG Discord Account Verification',
-        text: `Use this one-time code to verify your account!\nCode: ${code}\nUse the command \'/verify complete\' in any channel.`
+        text:
+            `Use this one-time code to verify your account!
+            \nCode: ${code}\nUse the command \'/verify complete\' in #verify.`
     };
 
     await transporter.sendMail(mailOptions, async function (error, info) {
         if (error) await bot.logger.error(`An error occurred sending an email to ${email}`, error);
-        else await bot.logger.info('Email sent: ' + info.response);
+        else await bot.logger.info("Verification email sent");
     });
 }
 

@@ -34,7 +34,8 @@ module.exports = {
 
     async execute(interaction: CommandInteraction) {
         const count = interaction.options.getInteger("count");
-        let messages = await interaction.channel.messages.fetch({limit: count})
+        let messages = await interaction.channel.messages.fetch({limit: count + 1})
+        messages.delete(messages.first().id);
         let deletedMessages = await (interaction.channel as TextChannel).bulkDelete(messages, true);
 
         if (count != deletedMessages.size) {
@@ -44,7 +45,7 @@ module.exports = {
             })
         }
 
-        if (count > 1) await interaction.reply({content: `${count} messages were deleted.`, ephemeral: true});
-        else await interaction.reply({content: `1 message was deleted.`, ephemeral: true});
+        if (count > 1) return ({content: `${count} messages were deleted.`, ephemeral: true});
+        else return ({content: `1 message was deleted.`, ephemeral: true});
     }
 }

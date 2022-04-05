@@ -1,18 +1,14 @@
-import {roleMention} from '@discordjs/builders'
 import {
-    ButtonInteraction,
-    Client,
-    CommandInteraction,
-    GuildMember, Interaction, InteractionReplyOptions, MessageEmbed, MessagePayload,
-    Role,
-    SelectMenuInteraction,
-    Snowflake,
-    TextChannel
+    ButtonInteraction, Client, CommandInteraction,
+    GuildMember, InteractionReplyOptions, MessageEmbed,
+    Role, SelectMenuInteraction, TextChannel
 } from 'discord.js';
 import * as config from './config.json';
 import Bot from "./modules/Bot";
 import Ticket from "./modules/Ticket";
 import Student from "./modules/Student";
+import {collections} from "./services/database.service";
+
 
 export const bot = new Bot();
 
@@ -69,12 +65,20 @@ bot.on('guildMemberRemove', async guildMember => {
  */
 async function receiveCommand(interaction: CommandInteraction) {
     try {
+        await interaction.deferReply();
         const command = bot.commands.get(interaction.commandName);
-        await command.execute(interaction);
+        const response = await command.execute(interaction);
+        await interaction.deleteReply();
+        if (response.ephemeral) {
+            await interaction.followUp(response);
+        } else {
+            await interaction.channel.send(response);
+        }
         await bot.logger.info(`${interaction.commandName} command issued by ${interaction.user.username}`);
     } catch (error) {
         await bot.logger.error(`${interaction.commandName} command issued by ${interaction.user.username} failed`, error);
-        await interaction.reply({content: "There was an error running this command.", ephemeral: true});
+        await interaction.deleteReply();
+        await interaction.followUp({content: "There was an error running this command.", ephemeral: true});
     }
 }
 
@@ -118,7 +122,8 @@ async function receiveSelectMenu(interaction: SelectMenuInteraction) {
  * @param guildMember
  * @param interaction
  */
-async function enhancedRoleRequest(role: Role, guildMember: GuildMember, interaction: ButtonInteraction | SelectMenuInteraction): Promise<InteractionReplyOptions> {
+async function enhancedRoleRequest
+(role: Role, guildMember: GuildMember, interaction: ButtonInteraction | SelectMenuInteraction): Promise<InteractionReplyOptions> {
     let response;
     let memberHasRole = await hasRole(role.id, guildMember);
     let student = await Student.get(guildMember.id);
@@ -127,8 +132,19 @@ async function enhancedRoleRequest(role: Role, guildMember: GuildMember, interac
         case "Coach": case "Captain": case "Player":
             if (memberHasRole) response = {content: "You already have this role.", ephemeral: true}
             else if (student) {
-                let ticket = await Ticket.open(student, role.name);
-                response = {content: `A ticket has been opened in <#${ticket.id}>`, ephemeral: true}
+                let hasOpenTicket = false;
+                let tickets = await collections.tickets.find({_owner: student.id});
+                await tickets.forEach(document => {
+                    let ticket = Ticket.fromObject(document);
+                    if (ticket.status) {
+                        response = {content: `You already have a ticket open in <#${ticket.id}>`, ephemeral: true}
+                        hasOpenTicket = true;
+                    }
+                })
+                if (!hasOpenTicket) {
+                    let ticket = await Ticket.open(student, role.name);
+                    response = {content: `A ticket has been opened in <#${ticket.id}>`, ephemeral: true}
+                }
             } else response = {content: `You must verify yourself as a student first. <#${config.channels.verify}>`, ephemeral: true}
             break;
 
@@ -156,10 +172,10 @@ async function enhancedRoleRequest(role: Role, guildMember: GuildMember, interac
 
         default:
             if (memberHasRole) {
-                response = {content: `You have removed the role **${roleMention(role.id)}** from yourself.`, ephemeral: true}
+                response = {content: `You have removed the role **<@&${role.id}>** from yourself.`, ephemeral: true}
                 await removeRole(role.id, guildMember);
             } else {
-                response = {content: `You applied the role **${roleMention(role.id)}** to yourself.`, ephemeral: true}
+                response = {content: `You applied the role **<@&${role.id}>** to yourself.`, ephemeral: true}
                 await addRole(role.id, guildMember);
             }
     }

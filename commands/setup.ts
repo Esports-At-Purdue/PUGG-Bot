@@ -4,56 +4,58 @@ import {
     MessageButton,
     MessageEmbed,
     MessageSelectMenu
-} from 'discord.js'
-import { SlashCommandBuilder } from '@discordjs/builders'
-import * as config from '../config.json';
+} from "discord.js"
+import { SlashCommandBuilder } from "@discordjs/builders"
+import * as config from "../config.json";
 import {bot} from "../index";
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('setup')
-        .setDescription('Creates a various-purpose menu.')
+        .setName("setup")
+        .setDescription("Creates a various-purpose menu.")
         .setDefaultPermission(false)
         .addStringOption(option => option
-            .setName('menu_name')
-            .setDescription('The name of the menu to setup')
+            .setName("menu_name")
+            .setDescription("The name of the menu to setup")
             .setRequired(true)
-            .addChoice('verification', 'verification_menu')
-            .addChoice('esports', 'esports_menu')
-            .addChoice('games', 'games_menu')
-            .addChoice('platforms', 'platform_menu')
-            .addChoice('genres', 'genre_menu')
-            .addChoice('welcome', 'welcome_menu')
+            .addChoice("verification", "verification_menu")
+            .addChoice("esports", "esports_menu")
+            .addChoice("games", "games_menu")
+            .addChoice("platforms", "platform_menu")
+            .addChoice("genres", "genre_menu")
+            .addChoice("welcome", "welcome_menu")
+            .addChoice("community", "community_menu")
         ),
 
     permissions: [
         {
             id: config.roles.pugg_officer,
-            type: 'ROLE',
+            type: "ROLE",
             permission: true
         },
         {
             id: config.roles.esports_officer,
-            type: 'ROLE',
+            type: "ROLE",
             permission: true
         },
         {
             id: config.roles.casual_officer,
-            type: 'ROLE',
+            type: "ROLE",
             permission: true
         }
     ],
 
     async execute(interaction: CommandInteraction) {
-        let menu_name = interaction.options.getString('menu_name');
+        let menu_name = interaction.options.getString("menu_name");
         switch(menu_name) {
-            case 'verification_menu': return buildVerificationMenu();
-            case 'esports_menu': return buildEsportsMenu();
-            case 'games_menu': return buildGamesMenu();
-            case 'platform_menu': return buildPlatformsMenu();
-            case 'genre_menu': return buildGenresMenu();
-            case 'welcome_menu': return buildWelcomeMenu();
-            default: return ({content: 'Sorry, the specified menu does not exist', ephemeral: true});
+            case "verification_menu": return buildVerificationMenu();
+            case "esports_menu": return buildEsportsMenu();
+            case "games_menu": return buildGamesMenu();
+            case "platform_menu": return buildPlatformsMenu();
+            case "genre_menu": return buildGenresMenu();
+            case "welcome_menu": return buildWelcomeMenu();
+            case "community_menu": return buildCommunityMenu();
+            default: return ({content: "Sorry, the specified menu does not exist", ephemeral: true});
         }
     }
 }
@@ -71,19 +73,19 @@ async function buildVerificationMenu() {
         .addComponents(
             new MessageButton()
                 .setCustomId(config.roles.purdue)
-                .setLabel('Purdue')
-                .setStyle('PRIMARY'),
+                .setLabel("Purdue")
+                .setStyle("PRIMARY"),
             new MessageButton()
                 .setCustomId(config.roles["non-purdue"])
-                .setLabel('Non-Purdue')
-                .setStyle('SECONDARY'),
+                .setLabel("Non-Purdue")
+                .setStyle("SECONDARY"),
         );
     return ({embeds: [embed], components: [row]});
 }
 
 async function buildEsportsMenu() {
     let embed = new MessageEmbed()
-        .setTitle("Purdue Esports Roles Menu")
+        .setTitle("Purdue Esports Request Menu")
         .setColor("#f1c40f")
         .setDescription("If you play on a competitive esports team for Purdue, select any of the positions to open a request ticket. If multiple positions apply to you, communicate that in your ticket.");
 
@@ -91,16 +93,16 @@ async function buildEsportsMenu() {
         .addComponents(
             new MessageButton()
                 .setCustomId(config.roles.coach)
-                .setLabel('Coach')
-                .setStyle('PRIMARY'),
+                .setLabel("Coach")
+                .setStyle("SECONDARY"),
             new MessageButton()
                 .setCustomId(config.roles.captain)
-                .setLabel('Captain')
-                .setStyle('PRIMARY'),
+                .setLabel("Captain")
+                .setStyle("SECONDARY"),
             new MessageButton()
                 .setCustomId(config.roles.player)
-                .setLabel('Player')
-                .setStyle('PRIMARY')
+                .setLabel("Player")
+                .setStyle("SECONDARY")
         );
 
     return ({embeds: [embed], components: [row]});
@@ -114,14 +116,14 @@ async function buildGamesMenu() {
     embed = new MessageEmbed()
         .setTitle("Game Selection Menu")
         .setColor("#f1c40f")
-        .setDescription("Select any game to apply the role to yourself!");
+        .setDescription("Select your favorite games to apply their role\'s to yourself!");
 
     return ({ embeds: [embed], components: rows });
 }
 
 async function buildPlatformsMenu() {
     let embed = new MessageEmbed()
-        .setTitle("Platform Button Menu")
+        .setTitle("Platform Menu")
         .setColor("#f1c40f")
         .setDescription("Select any of the platforms you game on!");
 
@@ -134,7 +136,7 @@ async function buildPlatformsMenu() {
             new MessageButton()
                 .setCustomId(`${role.id}`)
                 .setLabel(`${role.name}`)
-                .setStyle('SECONDARY')
+                .setStyle("SECONDARY")
                 .setEmoji(emoji)
         )
     }
@@ -144,7 +146,7 @@ async function buildPlatformsMenu() {
 
 async function buildGenresMenu() {
     let embed = new MessageEmbed()
-        .setTitle("Genres Button Menu")
+        .setTitle("Genres Menu")
         .setColor("#f1c40f")
         .setDescription("Select any of the game genres that you enjoy!");
 
@@ -157,7 +159,7 @@ async function buildGenresMenu() {
             new MessageButton()
                 .setCustomId(`${role.id}`)
                 .setLabel(`${role.name}`)
-                .setStyle('SECONDARY')
+                .setStyle("SECONDARY")
                 .setEmoji(emoji)
         )
     }
@@ -186,9 +188,29 @@ async function buildWelcomeMenu() {
         .addComponents(
             new MessageButton()
                 .setCustomId(config.roles.pugger)
-                .setLabel('Become A PUGGer')
-                .setStyle('PRIMARY')
+                .setLabel("Become A PUGGer")
+                .setStyle("PRIMARY")
         )
+    return ({embeds: [embed], components: [row]});
+}
+
+async function buildCommunityMenu() {
+    let row;
+    let embed;
+
+    embed = new MessageEmbed()
+        .setTitle("Community Engagement Menu")
+        .setColor("#f1c40f")
+        .setDescription(`• <@&${config.roles["community-night"]}> - If you would like notifications for each Community Night.`)
+
+    row = new MessageActionRow()
+        .addComponents(
+            new MessageButton()
+                .setCustomId(config.roles["community-night"])
+                .setLabel("Community Night")
+                .setStyle("SECONDARY")
+        )
+
     return ({embeds: [embed], components: [row]});
 }
 
@@ -199,7 +221,7 @@ async function buildGamesRows() {
         let actionRow = new MessageActionRow()
         let selectMenu = new MessageSelectMenu()
             .setCustomId(`select_${i}`)
-            .setPlaceholder('Select your favorite games!');
+            .setPlaceholder("Select your favorite games!");
 
         for (let j = i * 25; j < (i * 25) + 25; j++) {
             if (games[j] !== undefined) {

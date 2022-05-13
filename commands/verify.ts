@@ -1,6 +1,6 @@
 import {SlashCommandBuilder} from '@discordjs/builders'
 import * as nodemailer from 'nodemailer';
-import {CommandInteraction, GuildMember} from "discord.js";
+import {CommandInteraction, GuildMember, InteractionReplyOptions, MessageOptions} from "discord.js";
 import * as config from "../config.json";
 import Student from "../modules/Student";
 import {collections} from "../services/database.service";
@@ -10,7 +10,7 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName('verify')
         .setDescription('Initiates Purdue email verification process')
-        .setDefaultPermission(false)
+        .setDefaultPermission(true)
 
         // start - subcommand
         .addSubcommand((command) => command
@@ -43,7 +43,7 @@ module.exports = {
     ],
 
     async execute(interaction: CommandInteraction) {
-        let response;
+        let response: InteractionReplyOptions = {content: "", ephemeral: true};
         let subcommand = interaction.options.getSubcommand();
         let student = await Student.get(interaction.user.id);
 
@@ -52,19 +52,38 @@ module.exports = {
                 let email = interaction.options.getString('email');
                 if (student) {
                     if (student.status) {
-                        response = {content: "You are verified.", ephemeral: true};
-                        await (interaction.member as GuildMember).roles.add(config.roles.purdue);
-                        await (interaction.member as GuildMember).roles.remove(config.roles["non-purdue"]);
-                    } else response = {content: "Please finish verification with \`/verify complete\`.", ephemeral: true};
-                } else if (await collections.students.findOne({_email: email})) {
-                    response = {content: "This email is already in use.", ephemeral: true}
-                } else if (isValidEmail(email)) {
-                    let code = Math.floor(100000 + Math.random() * 900000);
-                    let username = interaction.user.username;
-                    await sendEmail(email, code);
-                    await bot.logger.info(`New Student Registered - Username: ${username}`)
-                    await Student.post(new Student(interaction.user.id, username, email, code, false));
-                    response = {content: `An email containing your one-time code was sent to \`${email}\`.`, ephemeral: true};
+                        (interaction.member as GuildMember).roles.add(config.roles.purdue).then().catch();
+                        (interaction.member as GuildMember).roles.remove(config.roles["non-purdue"]).then().catch();
+                        response.content = "You are verified";
+                    } else response.content = "Please finish verification with \`/verify complete\`.";
+                } else {
+                    student = Student.fromObject(await collections.students.findOne({_email: email}));
+                    if (student != null) {
+                        if (student.status) {
+                            response.content = "This email is already in use.";
+                        } else {
+                            Student.delete(student).then(() => {
+                                let code = Math.floor(100000 + Math.random() * 900000);
+                                let username = interaction.user.username;
+                                sendEmail(email, code);
+                                bot.logger.info(`New Student Registered - Username: ${username}`)
+                                Student.post(new Student(interaction.user.id, username, email, code, false));
+                            }).catch();
+                            response.content = `An email containing your one-time code was sent to \`${email}\`.`;
+                        }
+                    } else {
+                        if (isValidEmail(email)) {
+                            let code = Math.floor(100000 + Math.random() * 900000);
+                            let username = interaction.user.username;
+                            Student.post(new Student(interaction.user.id, username, email, code, false)).then(() => {
+                                sendEmail(email, code);
+                                bot.logger.info(`New Student Registered - Username: ${username}`);
+                            }).catch();
+                            response = {content: `An email containing your one-time code was sent to \`${email}\`.`, ephemeral: true};
+                        } else {
+                            response = {content: `The email you provided, \`${email}\`, is invalid. Please provide a valid Purdue email.`, ephemeral: true};
+                        }
+                    }
                 }
                 break;
             case "complete":
@@ -77,9 +96,10 @@ module.exports = {
                     } else if (code == student.code) {
                         student.code = 0;
                         student.status = true;
-                        await student.save();
-                        await (interaction.member as GuildMember).roles.add(config.roles.purdue);
-                        await bot.logger.info(`Student Verified - Username: ${student.username}`);
+                        Student.put(student).then(() => {
+                            (interaction.member as GuildMember).roles.add(config.roles.purdue);
+                            bot.logger.info(`Student Verified - Username: ${student.username}`);
+                        }).catch();
                         response = {content: "You have successfully been authenticated!", ephemeral: true};
                     } else response = {content: "Sorry, this code is incorrect.", ephemeral: true};
                 } else {
@@ -88,7 +108,6 @@ module.exports = {
                 break;
             default:
                 response = {content: "Something went very wrong... Please send this to <@!751910711218667562>."};
-                throw new Error("Verify command failed - Inaccessible option");
         }
         return (response);
     }
@@ -128,6 +147,113 @@ async function sendEmail(email, code) {
  */
 function isValidEmail(email): boolean {
     let emailRegEx = new RegExp(/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/m);
+    let matches = email.toLowerCase().match(emailRegEx);
+    if (matches != null) {
+        return matches[0].endsWith('@purdue.edu') || matches[0].endsWith('@alumni.purdue.edu') || matches[0].endsWith("@student.purdueglobal.edu");
+    }
+    return false;
+}
+
+/*
+    async execute(interaction: CommandInteraction) {
+        let response;
+        let subcommand = interaction.options.getSubcommand();
+        let student = await Student.get(interaction.user.id);
+
+        switch (subcommand) {
+            case "start":
+                let email = interaction.options.getString('email');
+                if (student) {
+                    if (student.status) {
+                        (interaction.member as GuildMember).roles.add(config.roles.purdue).then().catch();
+                        (interaction.member as GuildMember).roles.remove(config.roles["non-purdue"]).then().catch();
+                        response = {content: "You are verified.", ephemeral: true};
+                    } else response = {content: "Please finish verification with \`/verify complete\`.", ephemeral: true};
+                } else {
+                    student = Student.fromObject(await collections.students.findOne({_email: email}));
+                    if (student != null) {
+                        if (student.status) {
+                            response = {content: "This email is already in use.", ephemeral: true}
+                        } else {
+                            Student.delete(student).then(() => {
+                                let code = Math.floor(100000 + Math.random() * 900000);
+                                let username = interaction.user.username;
+                                sendEmail(email, code);
+                                bot.logger.info(`New Student Registered - Username: ${username}`)
+                                Student.post(new Student(interaction.user.id, username, email, code, false));
+                            }).catch();
+                            response = {content: `An email containing your one-time code was sent to \`${email}\`.`, ephemeral: true};
+                        }
+                    } else {
+                        if (isValidEmail(email)) {
+                            let code = Math.floor(100000 + Math.random() * 900000);
+                            let username = interaction.user.username;
+                            Student.post(new Student(interaction.user.id, username, email, code, false)).then(() => {
+                                sendEmail(email, code);
+                                bot.logger.info(`New Student Registered - Username: ${username}`);
+                            }).catch();
+                            response = {content: `An email containing your one-time code was sent to \`${email}\`.`, ephemeral: true};
+                        } else {
+                            response = {content: `The email you provided, \`${email}\`, is invalid. Please provide a valid Purdue email.`, ephemeral: true};
+                        }
+                    }
+                }
+                break;
+            case "complete":
+                if (student) {
+                    let code = interaction.options.getInteger('code');
+                    if (student.status) {
+                        response = {content: "You are verified.", ephemeral: true};
+                        await (interaction.member as GuildMember).roles.add(config.roles.purdue);
+                        await (interaction.member as GuildMember).roles.remove(config.roles["non-purdue"]);
+                    } else if (code == student.code) {
+                        student.code = 0;
+                        student.status = true;
+                        Student.put(student).then(() => {
+                            (interaction.member as GuildMember).roles.add(config.roles.purdue);
+                            bot.logger.info(`Student Verified - Username: ${student.username}`);
+                        }).catch();
+                        response = {content: "You have successfully been authenticated!", ephemeral: true};
+                    } else response = {content: "Sorry, this code is incorrect.", ephemeral: true};
+                } else {
+                    response = {content: "You need to submit an email for verification first. Use \`/verify start\`", ephemeral: true};
+                }
+                break;
+            default:
+                response = {content: "Something went very wrong... Please send this to <@!751910711218667562>."};
+        }
+        return (response);
+    }
+}
+
+
+async function sendEmail(email, code) {
+    let transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: config.email.username,
+            pass: config.email.password
+        }
+    });
+    let mailOptions = {
+        from: config.email.username,
+        to: email,
+        subject: 'PUGG Discord Account Verification',
+        text:
+            `Use this one-time code to verify your account!
+            \nCode: ${code}\nUse the command \'/verify complete\' in #verify.`
+    };
+
+    await transporter.sendMail(mailOptions, async function (error, info) {
+        if (error) await bot.logger.error(`An error occurred sending an email to ${email}`, error);
+        else await bot.logger.info("Verification email sent");
+    });
+}
+
+function isValidEmail(email): boolean {
+    let emailRegEx = new RegExp(/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/m);
     email = email.toLowerCase().match(emailRegEx)[0];
     return email.endsWith('@purdue.edu') || email.endsWith('@alumni.purdue.edu') || email.endsWith("@student.purdueglobal.edu");
 }
+ */
+

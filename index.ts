@@ -9,7 +9,6 @@ import Ticket from "./modules/Ticket";
 import Student from "./modules/Student";
 import {collections} from "./services/database.service";
 
-
 export const bot = new Bot();
 
 bot.login(config.token).then(async () => {
@@ -50,8 +49,25 @@ bot.on('messageCreate', async message => {
 });
 
 bot.on('guildMemberAdd', async guildMember => {
-    const channel = await bot.guild.channels.fetch(config.channels.join_channel) as TextChannel;
+    let channel = await bot.guild.channels.fetch(config.channels.join_channel) as TextChannel;
     await channel.send({content: `${guildMember.user} has joined. Index: ${bot.guild.memberCount}`});
+    channel = await bot.guild.channels.fetch(config.channels.general) as TextChannel;
+    let embed = new MessageEmbed().setColor("#2f3136");
+    switch (Math.floor(Math.random() * 11)) {
+        case 0: embed.setDescription(`Welcome, **${guildMember.user.username}**. We were expecting you ( ͡° ͜ʖ ͡°)`); break;
+        case 1: embed.setDescription(`Swoooosh. **${guildMember.user.username}** just landed.`); break;
+        case 2: embed.setDescription(`**${guildMember.user.username}** just showed up. Hold my beer.`); break;
+        case 3: embed.setDescription(`Challenger approaching - **${guildMember.user.username}** has appeared!`); break;
+        case 4: embed.setDescription(`Never gonna give **${guildMember.user.username}** up. Never gonna let **${guildMember.user.username}** down.`); break;
+        case 5: embed.setDescription(`We've been expecting you **${guildMember.user.username}**`); break;
+        case 6: embed.setDescription(`**${guildMember.user.username}** has joined the server! It's super effective!`); break;
+        case 7: embed.setDescription(`**${guildMember.user.username}** is here, as the prophecy foretold.`); break;
+        case 8: embed.setDescription(`Ready player **${guildMember.user.username}**`); break;
+        case 9: embed.setDescription(`Roses are red, violets are blue, **${guildMember.user.username}** joined this server to be with you`); break;
+        case 10: embed.setDescription(`**${guildMember.user.username}** just arrived. Seems OP - please nerf.`); break;
+    }
+    // Welcome Messages Disabled
+    //await channel.send({embeds: [embed]});
 });
 
 bot.on('guildMemberRemove', async guildMember => {

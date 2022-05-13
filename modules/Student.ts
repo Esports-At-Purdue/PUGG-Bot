@@ -15,7 +15,8 @@ export default class Student {
         this._status = status;
     }
 
-    static fromObject(object): Student {
+    static fromObject(object) {
+        if (object == null) return null;
         return new Student(object._id, object._username, object._email, object._code, object._status);
     }
 

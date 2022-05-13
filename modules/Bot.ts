@@ -7,16 +7,15 @@ import {
     Intents,
     TextChannel
 } from "discord.js";
-import {connectToDatabase} from "../services/database.service";
 import {Routes} from "discord-api-types/v9";
 import * as config from "../config.json";
 import {REST} from "@discordjs/rest";
-import * as express from "express";
 import * as fs from "fs";
 import Logger from "./Logger";
-import {studentsRouter} from "../services/students.router";
 import {ticketsRouter} from "../services/tickets.router";
 import {postTwitch} from "../services/twitch.service";
+import Student from "./Student";
+import {connectToDatabase} from "../services/database.service";
 
 const options = {
     intents: [
@@ -74,29 +73,8 @@ export default class Bot extends Client{
         this._guild = await this.guilds.fetch(config.guild);
         this._logChannel = await this._guild.channels.fetch(config.channels.log_channel) as TextChannel;
         this._logger = new Logger(this._logChannel);
-        await this.initializeExpress(28018, 8080);
         await this.initializeCommands(config.token);
-    }
-
-    async initializeExpress(address: number, port: number) {
-        await connectToDatabase().then(() => {
-            const mongoApp = express();
-            mongoApp.use("/students", studentsRouter);
-            mongoApp.use("/tickets", ticketsRouter);
-            mongoApp.listen(address, () => {
-                this.logger.info(`Listening for DB Queries at http://localhost:${address}`)
-            })
-        }).catch((error: Error) => {
-            this.logger.fatal("Database connection failure", error);
-            process.exit(0);
-        })
-
-        const twitchApp = express();
-        twitchApp.use(express.raw({ type: 'application/json'}));
-        twitchApp.listen(port, () => {this.logger.info(`Listening for Twitch Callbacks at http://localhost:${port}`)})
-        twitchApp.post('/eventsub', async (req, res) => {
-            await postTwitch(req, res);
-        })
+        await connectToDatabase();
     }
 
     async initializeCommands(token: string) {
@@ -117,10 +95,10 @@ export default class Bot extends Client{
             const guildCommands = await rest.get(Routes.applicationGuildCommands(id, guild.id)) as Array<ApplicationCommand>;
             for (const guildCommand of guildCommands) {
                 const command = this._commands.get(guildCommand.name);
-                await guild.commands.permissions.set({
-                    command: guildCommand.id,
-                    permissions: command.permissions
-                })
+                //await guild.commands.permissions.set({
+                //    command: guildCommand.id,
+                //    permissions: command.permissions
+                //})
             }
             await this.logger.info("Application commands uploaded");
         } catch (error) {

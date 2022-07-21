@@ -12,9 +12,6 @@ import * as config from "../config.json";
 import {REST} from "@discordjs/rest";
 import * as fs from "fs";
 import Logger from "./Logger";
-import {ticketsRouter} from "../services/tickets.router";
-import {postTwitch} from "../services/twitch.service";
-import Student from "./Student";
 import {connectToDatabase} from "../services/database.service";
 
 const options = {
@@ -26,7 +23,7 @@ const options = {
     ]
 } as ClientOptions;
 
-export default class Bot extends Client{
+export default class Bot extends Client {
     private _guild: Guild;
     private _logger: Logger;
     private _commands: Collection<any, any>;

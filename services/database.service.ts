@@ -1,5 +1,6 @@
 import * as mongoDB from "mongodb";
 import * as dotenv from "dotenv";
+import * as config from "../config.json";
 import {bot} from "../index";
 
 export const collections: { users?: mongoDB.Collection, tickets?: mongoDB.Collection, students?: mongoDB.Collection } = {}
@@ -7,7 +8,7 @@ export const collections: { users?: mongoDB.Collection, tickets?: mongoDB.Collec
 export async function connectToDatabase () {
     dotenv.config();
 
-    const client: mongoDB.MongoClient = new mongoDB.MongoClient("mongodb://localhost:27017");
+    const client: mongoDB.MongoClient = new mongoDB.MongoClient(`mongodb://${config.mongo.username}:${config.mongo.password}@technowizzy.dev:27017/?authMechanism=DEFAULT`);
 
     await client.connect();
 

@@ -1,9 +1,11 @@
 import {
     ButtonInteraction, Client, CommandInteraction,
-    GuildMember, InteractionReplyOptions, MessageEmbed,
-    Role, SelectMenuInteraction, TextChannel
+    GuildMember, InteractionReplyOptions, MessageActionRow, MessageEmbed, Modal, ModalSubmitInteraction,
+    Role, SelectMenuInteraction, TextChannel, TextInputComponent
 } from 'discord.js';
+import * as crypto from "crypto";
 import * as config from './config.json';
+import * as nodemailer from 'nodemailer';
 import Bot from "./modules/Bot";
 import Ticket from "./modules/Ticket";
 import Student from "./modules/Student";
@@ -27,6 +29,7 @@ bot.on('interactionCreate', async interaction => {
         if (interaction.isButton()) await receiveButton(interaction);
         if (interaction.isSelectMenu()) await receiveSelectMenu(interaction);
         if (interaction.isCommand()) await receiveCommand(interaction);
+        if (interaction.isModalSubmit()) await receiveModal(interaction);
 });
 
 bot.on('messageCreate', async message => {
@@ -109,7 +112,10 @@ async function receiveButton(interaction: ButtonInteraction) {
         else {
             let role = await interaction.guild.roles.fetch(id);
             let guildMember = interaction.member as GuildMember;
-            await interaction.reply(await enhancedRoleRequest(role, guildMember, interaction));
+            let response = await enhancedRoleRequest(role, guildMember, interaction);
+            if (response.content != null) {
+                await interaction.reply(response);
+            }
         }
         await bot.logger.info(`${interaction.component.label} button used by ${interaction.user.username}`);
     } catch (error) {
@@ -133,6 +139,46 @@ async function receiveSelectMenu(interaction: SelectMenuInteraction) {
 }
 
 /**
+ * Executes logic on a ModalSubmit Interaction
+ * @param interaction
+ */
+async function receiveModal(interaction: ModalSubmitInteraction) {
+    let response = {content: null, ephemeral: true};
+    let student: Student;
+
+    try {
+        switch (interaction.customId) {
+            case "verify-start":
+                let email = interaction.fields.getTextInputValue("email");
+                student = Student.fromObject(await collections.students.findOne({_email: email}));
+                if (student && student.status) {
+                    response.content = "This email is already in use.";
+                } else {
+                    if (isValidEmail(email)) {
+                        let username = interaction.user.username;
+                        let hash = encrypt(interaction.user.id + "-" + Date.now());
+                        let token = hash.iv + "-" + hash.content;
+                        let url = `https://www.technowizzy.dev/api/v1/students/verify/${token}`;
+                        await sendEmail(email, url);
+                        await bot.logger.info(`New Student Registered - Username: ${username}`)
+                        await Student.post(new Student(interaction.user.id, username, email, 0, false));
+                        response.content = `A verification email was sent to \`${email}\`. Click the **Purdue Button** once you have verified!`;
+                    } else {
+                        response.content = `The email you provided, \`${email}\`, is invalid. Please provide a valid Purdue email.`;
+                    }
+                }
+                break;
+        }
+
+        if (response.content != null) {
+            await interaction.reply(response);
+        }
+    } catch (error) {
+        await bot.logger.error(`Modal ${interaction.customId} selected by ${interaction.user.username} failed`, error);
+    }
+}
+
+/**
  * Executes logic for managing various roles from a ButtonInteraction
  * @param role
  * @param guildMember
@@ -140,47 +186,54 @@ async function receiveSelectMenu(interaction: SelectMenuInteraction) {
  */
 async function enhancedRoleRequest
 (role: Role, guildMember: GuildMember, interaction: ButtonInteraction | SelectMenuInteraction): Promise<InteractionReplyOptions> {
-    let response;
+    let response: InteractionReplyOptions = {content: null, ephemeral: true};
     let memberHasRole = await hasRole(role.id, guildMember);
     let student = await Student.get(guildMember.id);
 
     switch (role.name) {
         case "Coach": case "Captain": case "Player":
-            if (memberHasRole) response = {content: "You already have this role.", ephemeral: true}
+            if (memberHasRole) response.content = "You already have this role.";
             else if (student) {
                 let hasOpenTicket = false;
                 let tickets = await collections.tickets.find({_owner: student.id});
                 await tickets.forEach(document => {
                     let ticket = Ticket.fromObject(document);
                     if (ticket.status) {
-                        response = {content: `You already have a ticket open in <#${ticket.id}>`, ephemeral: true}
+                        response.content = `You already have a ticket open in <#${ticket.id}>`;
                         hasOpenTicket = true;
                     }
                 })
                 if (!hasOpenTicket) {
                     let ticket = await Ticket.open(student, role.name);
-                    response = {content: `A ticket has been opened in <#${ticket.id}>`, ephemeral: true}
+                    response.content = `A ticket has been opened in <#${ticket.id}>`;
                 }
-            } else response = {content: `You must verify yourself as a student first. <#${config.channels.verify}>`, ephemeral: true}
+            } else response.content = `You must verify yourself as a student first. <#${config.channels.verify}>`;
             break;
 
         case "Purdue":
-            if (student) {
-                response = {content: "You are verified!", ephemeral: true}
+            if (student && student.status) {
+                response.content = "You are verified!";
                 await addRole(config.roles.purdue, guildMember);
                 await removeRole(config.roles["non-purdue"], guildMember);
-            } else response = {content: "Please follow the instructions above to verify yourself.", ephemeral: true}
+            } else {
+                let modal = new Modal().setCustomId("verify-start").setTitle("Purdue Verification");
+                let emailInput = new TextInputComponent().setCustomId("email").setLabel("What is your Purdue email address?").setStyle("SHORT");
+                let row = new MessageActionRow().addComponents(emailInput);
+                // @ts-ignore
+                modal.addComponents(row);
+                await interaction.showModal(modal);
+            }
             break;
 
         case "Non-Purdue":
             if (memberHasRole) {
-                response = {content: "You have removed the role **Non-Purdue** from yourself.", ephemeral: true}
+                response.content = "You have removed the role **Non-Purdue** from yourself.";
                 await removeRole(config.roles["non-purdue"], guildMember);
             } else {
                 if (student) {
-                    response = {content: "Purdue students cannot apply the Non-Purdue role.", ephemeral: true}
+                    response.content = "Purdue students cannot apply the Non-Purdue role.";
                 } else {
-                    response = {content: "You have applied the role **Non-Purdue** to yourself.", ephemeral: true}
+                    response.content = "You have applied the role **Non-Purdue** to yourself.";
                     await addRole(config.roles["non-purdue"], guildMember);
                 }
             }
@@ -188,10 +241,10 @@ async function enhancedRoleRequest
 
         default:
             if (memberHasRole) {
-                response = {content: `You have removed the role **<@&${role.id}>** from yourself.`, ephemeral: true}
+                response.content = `You have removed the role **<@&${role.id}>** from yourself.`;
                 await removeRole(role.id, guildMember);
             } else {
-                response = {content: `You applied the role **<@&${role.id}>** to yourself.`, ephemeral: true}
+                response.content = `You applied the role **<@&${role.id}>** to yourself.`;
                 await addRole(role.id, guildMember);
             }
     }
@@ -247,3 +300,59 @@ async function hasRole(id: string, guildMember: GuildMember) {
     })
     return result;
 }
+
+/**
+ * Parses the provided email address and confirms that is valid
+ * @param email the provided email address
+ */
+function isValidEmail(email): boolean {
+    let emailRegEx = new RegExp(/^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/m);
+    let matches = email.toLowerCase().match(emailRegEx);
+    if (matches != null) {
+        return matches[0].endsWith('@purdue.edu') || matches[0].endsWith('@alumni.purdue.edu') || matches[0].endsWith("@student.purdueglobal.edu");
+    }
+    return false;
+}
+
+/**
+ * Sends an authentication code to a provided email address
+ * @param email
+ * @param link
+ */
+async function sendEmail(email, link) {
+    let transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: config.email.username,
+            pass: config.email.password
+        }
+    });
+    let mailOptions = {
+        from: config.email.username,
+        to: email,
+        subject: 'PUGG Discord Account Verification',
+        text:
+            `Click this link to verify your account!
+            \nLink: ${link}
+            \nClick the \'Purdue Button\' in #verify to finalize verification!`
+    };
+
+    await transporter.sendMail(mailOptions, async function (error, info) {
+        if (error) await bot.logger.error(`An error occurred sending an email to ${email}`, error);
+        else await bot.logger.info("Verification email sent");
+    });
+}
+
+const encrypt = (text) => {
+
+    const iv = crypto.randomBytes(16);
+
+    const cipher = crypto.createCipheriv("aes-256-ctr", config.key, iv);
+
+    const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
+
+    return {
+        iv: iv.toString('hex'),
+        content: encrypted.toString('hex')
+    };
+};

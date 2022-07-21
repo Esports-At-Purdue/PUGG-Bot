@@ -18,13 +18,15 @@ module.exports = {
             .setName("menu_name")
             .setDescription("The name of the menu to setup")
             .setRequired(true)
-            .addChoice("verification", "verification_menu")
-            .addChoice("esports", "esports_menu")
-            .addChoice("games", "games_menu")
-            .addChoice("platforms", "platform_menu")
-            .addChoice("genres", "genre_menu")
-            .addChoice("welcome", "welcome_menu")
-            .addChoice("community", "community_menu")
+            .setChoices(
+                {name: "verification", value: "verification_menu"},
+                {name: "esports", value: "esports_menu"},
+                {name: "games", value: "games_menu"},
+                {name: "platforms", value: "platform_menu"},
+                {name: "genres", value: "genre_menu"},
+                {name: "welcome", value: "welcome_menu"},
+                {name: "community", value: "community_menu"}
+            )
         ),
 
     permissions: [
@@ -62,23 +64,20 @@ module.exports = {
 
 async function buildVerificationMenu() {
     let embed = new MessageEmbed()
-        .setTitle("Purdue Affiliation Menu")
+        .setTitle("Purdue Verification Menu")
         .setColor("#f1c40f")
         .setDescription("Indicate your affiliation with Purdue. The Purdue role requires email verification.\n\n" +
             "**How to authenticate yourself as a Purdue Student!**\n" +
-            "1. Use `/verify start` to have a one-time code sent to your email.\n" +
-            "2. Use `/verify complete` with your one-time code.\n");
+            "1. Click the **Purdue Button** to have a one-time code sent to your email.\n" +
+            "2. Click the **Purdue Button** again to confirm your one-time code.\n");
 
     let row = new MessageActionRow()
         .addComponents(
             new MessageButton()
                 .setCustomId(config.roles.purdue)
                 .setLabel("Purdue")
-                .setStyle("PRIMARY"),
-            new MessageButton()
-                .setCustomId(config.roles["non-purdue"])
-                .setLabel("Non-Purdue")
-                .setStyle("SECONDARY"),
+                .setStyle("SECONDARY")
+                .setEmoji(config.emotes.purdue),
         );
     return ({embeds: [embed], components: [row]});
 }
